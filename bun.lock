@@ -1,0 +1,49 @@
+{
+  "lockfileVersion": 2,
+  "configVersion": 1,
+  "workspaces": {
+    "": {
+      "dependencies": {
+        "@voxpelli/typed-utils": "^5.0.0",
+        "ts-extras": "^1.3.0",
+        "yabai-master-stack-plugin": "^4.2.0",
+      },
+      "devDependencies": {
+        "@keychord/config": "^0.0.9",
+      },
+    },
+  },
+  "packages": {
+    "@keychord/config": ["@keychord/config@0.0.9", "", { "dependencies": { "node-swift": "1.5.1" }, "bin": { "keychord-compile": "exports/compile.js" } }, "sha512-zLnUGJcbiFBx1B1sRfY961NjCBf26BF+xUlzr6Mj0NZPrR9H0XsEvYdgpkrSkKVEK6C4lFkfe8mY7bNj8FHNLg=="],
+
+    "@voxpelli/typed-utils": ["@voxpelli/typed-utils@5.0.0", "", {}, "sha512-QadkfDW9jmszubxLMxbj6gKpJ4aO1THblLVpE0zFuDc0d0wzufvkdSlfWdifhgmmnXv78VZsRCEIK+XRfWNTTg=="],
+
+    "commander": ["commander@10.0.1", "", {}, "sha512-y4Mg2tXshplEbSGzx7amzPwKKOCGuoSRP/CjEdwwk0FOGlUbq6lKuoyDZTNZkmxHdJtp54hdfY/JUrdL7Xfdug=="],
+
+    "import-cwd": ["import-cwd@3.0.0", "", { "dependencies": { "import-from": "^3.0.0" } }, "sha512-4pnzH16plW+hgvRECbDWpQl3cqtvSofHWh44met7ESfZ8UZOWWddm8hEyDTqREJ9RbYHY8gi8DqmaelApoOGMg=="],
+
+    "import-from": ["import-from@3.0.0", "", { "dependencies": { "resolve-from": "^5.0.0" } }, "sha512-CiuXOFFSzkU5x/CR0+z7T91Iht4CXgfCxVOFRhh2Zyhg5wOpWvvDLQUsWl+gcN+QscYBjez8hDCt85O7RLDttQ=="],
+
+    "mimic-fn": ["mimic-fn@4.0.0", "", {}, "sha512-vqiC06CuhBTUdZH+RYl8sFrL096vA45Ok5ISO6sE/Mr1jRbGH4Csnhi8f3wKVl7x8mO4Au7Ir9D3Oyv1VYMFJw=="],
+
+    "node-swift": ["node-swift@1.5.1", "", { "dependencies": { "import-cwd": "^3.0.0" }, "bin": { "node-swift": "lib/cli.js" } }, "sha512-bA4+HeSihdKIyyBFx+X5FFS5Nby6QI+O7KsLs14J/EkcrN88RZKjfPY/uXaeSY6k4tEB60Hu2mH4D/ZMgwCXbQ=="],
+
+    "onetime": ["onetime@6.0.0", "", { "dependencies": { "mimic-fn": "^4.0.0" } }, "sha512-1FlR+gjXK7X+AsAHso35MnyN5KqGwJRi/31ft6x0M194ht7S+rWAvd7PHss9xSKMzE0asv1pyIHaJYq+BbacAQ=="],
+
+    "pathe": ["pathe@1.1.2", "", {}, "sha512-whLdWMYL2TwI08hn8/ZqAbrVemu0LNaNNJZX73O6qaIdCTfXutsLhMkjdENX0qhsQ9uIimo4/aQOmXkoon2nDQ=="],
+
+    "resolve-from": ["resolve-from@5.0.0", "", {}, "sha512-qYg9KP24dD5qka9J47d0aVky0N+b4fTU89LN9iDnjB5waksiC49rvMB0PrUJQGoTmH50XPiqOvAjDfaijGxYZw=="],
+
+    "shell-quote": ["shell-quote@1.10.0", "", {}, "sha512-w1aiOKwKuRgtwAReIIj89puqg+I7GvX4IbLrvmhXbzQsj1+Zwi4VO3+fa6ZF91TWSjIxoEkKnMeHcLEODK5ZXA=="],
+
+    "tagged-tag": ["tagged-tag@1.0.0", "", {}, "sha512-yEFYrVhod+hdNyx7g5Bnkkb0G6si8HJurOoOEgC8B/O0uXLHlaey/65KRv6cuWBNhBgHKAROVpc7QyYqE5gFng=="],
+
+    "tiny-invariant": ["tiny-invariant@1.3.3", "", {}, "sha512-+FbBPE1o9QAYvviau/qC5SE3caw21q3xkvWKBtja5vgqOWIHHJ3ioaq1VPfn/Szqctz2bU/oYeKd9/z5BL+PVg=="],
+
+    "ts-extras": ["ts-extras@1.3.0", "", { "dependencies": { "type-fest": "^5.0.1" } }, "sha512-2o31AwfP5q7Sa0RN/KaSNBFkw0jRnWsqUY4W4SwBWrxbge9J6t9YBvJIRX2ZyVhpGj4zE5UYwNzTTBnIHeaDew=="],
+
+    "type-fest": ["type-fest@5.9.0", "", { "dependencies": { "tagged-tag": "^1.0.0" } }, "sha512-yANm3Jr3GiJ1qgJlxGAVxTOIcEOk1rhQHamlXtnrCK7EHP4HeM9OGxtMg/W7HFdrVzw/ZWJKGVIJusVH85sLtw=="],
+
+    "yabai-master-stack-plugin": ["yabai-master-stack-plugin@4.2.0", "", { "dependencies": { "commander": "^10.0.1", "onetime": "^6.0.0", "pathe": "^1.1.2", "shell-quote": "^1.8.1", "tiny-invariant": "^1.3.1" }, "bin": { "ymsp": "dist/_ymsp.mjs" } }, "sha512-0+9LU6Yeg+C/zW0Va9b2RVoOdoLCw2WtxxyVqFRMbeoAxNCbymoxyJPiJlLGsfJsQ2RQZ81iLDNZ2XgJApcV5g=="],
+  }
+}
