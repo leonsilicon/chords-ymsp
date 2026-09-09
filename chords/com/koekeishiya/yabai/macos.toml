@@ -3,7 +3,7 @@ name = "Yabai"
 [on.ymsp]
 type = "js"
 file = "ymsp.js"
-args = []
+args = [{ windowManager = "aerospace", aerospacePath = "/opt/homebrew/bin/aerospace" }]
 
 [chords]
 '.n' = { name = "North", 'emit:ymsp' = ["focus-up-window"] }
@@ -11,46 +11,56 @@ args = []
 '.s' = { name = "South", 'emit:ymsp' = ["focus-down-window"] }
 '.w' = { name = "West", shell = "yabai -m window --focus west" }
 
+
+# Master
 '.p' = { name = "Promote", 'emit:ymsp' = ["move-window-to-master"] }
 '.m' = { name = "Master (Focus)", 'emit:ymsp' = ["focus-master-window"] }
+'.m=' = { name = "Master: Increase (Width)", 'emit:ymsp' = ["increase-master-width"] }
+'.m-' = { name = "Master: Decrease (Width)", 'emit:ymsp' = ["decrease-master-width"] }
+'.mc=' = { name = "Master Count: Increase", 'emit:ymsp' = ["increase-master-window-count"] }
+'.mc-' = { name = "Master Count: Decrease", 'emit:ymsp' = ["decrease-master-window-count"] }
 
-'.w=' = { name = "Window: Increase (Master Count)", 'emit:ymsp' = ["increase-master-window-count"] }
-'.w-' = { name = "Window: Decrease (Master Count)", 'emit:ymsp' = ["decrease-master-window-count"] }
+'.w=' = { name = "Window: Increase (Height)", 'emit:ymsp' = ["increase-window-height"] }
+'.w-' = { name = "Window: Decrease (Height)", 'emit:ymsp' = ["decrease-window-height"] }
+'.wm' = { name = "Window: Minimize", 'emit:ymsp' = ["minimize-focused-window"] }
+'.wf' = { name = "Window: Float (Toggle)", 'emit:ymsp' = ["toggle-float-focused-window"] }
 
-'.u' = { name = "Up (Move Window)", shell = "yabai -m window --swap prev || yabai -m window --swap last" }
-'.d' = { name = "Down (Move Window)", shell = "yabai -m window --swap next || yabai -m window --swap first" }
+'.u' = { name = "Up (Move Window)", 'emit:ymsp' = ["move-window-up"] }
+'.d' = { name = "Down (Move Window)", 'emit:ymsp' = ['move-window-down'] }
 
 # Resize
+'?.r' = { name = "Resize / Relayout"}
+'.r' = { name = "Relayout", 'emit:ymsp' = ['relayout'] }
 '.rl' = { name = "Resize Left", shell = "yabai -m window --resize right:-50:0; yabai -m window --resize left:-50:0" }
 '.rr' = { name = "Resize Right", shell = "yabai -m window --resize right:50:0; yabai -m window --resize left:50:0" }
 '.ru' = { name = "Resize Up", shell = "yabai -m window --resize top:0:-50; yabai -m window --resize bottom:0:-50" }
 '.rd' = { name = "Resize Down", shell = "yabai -m window --resize bottom:0:50; yabai -m window --resize top:0:50" }
 
-'.q' = { name = "Quit", shell = "ymsp close-focused-window" }
+'.q' = { name = "Quit", 'emit:ymsp' = ["close-focused-window"] }
 
 # Displays
-'.]' = { name = "Next (Display)", shell = "ymsp focus-next-display" }
-'.[' = { name = "Previous (Display)", shell = "ymsp focus-previous-display" }
-'.f' = { name = "Forward (Display)", shell = "ymsp move-window-to-next-display" }
-'.k' = { name = "Backward (Display)", shell = "ymsp move-window-to-previous-display" }
+'.]' = { name = "Next (Display)", 'emit:ymsp' = ["focus-next-display"] }
+'.[' = { name = "Previous (Display)", 'emit:ymsp' = ["focus-previous-display"] }
+'.f' = { name = "Forward (Display)", 'emit:ymsp' = ["move-window-to-next-display"] }
+'.k' = { name = "Backward (Display)", 'emit:ymsp' = ["move-window-to-previous-display"] }
 
 # Spaces
-'.s1' = { name = "Space: 1", shell = "yabai -m space --focus 1" }
-'.s2' = { name = "Space: 2", shell = "yabai -m space --focus 2" }
-'.s3' = { name = "Space: 3", shell = "yabai -m space --focus 3" }
-'.s4' = { name = "Space: 4", shell = "yabai -m space --focus 4" }
-'.s5' = { name = "Space: 5", shell = "yabai -m space --focus 5" }
-'.s6' = { name = "Space: 6", shell = "yabai -m space --focus 6" }
-'.s7' = { name = "Space: 7", shell = "yabai -m space --focus 7" }
-'.s8' = { name = "Space: 8", shell = "yabai -m space --focus 8" }
-'.s9' = { name = "Space: 9", shell = "yabai -m space --focus 9" }
+'.s1' = { name = "Space: 1", 'emit:ymsp' = ['focus-space', 1] }
+'.s2' = { name = "Space: 2", 'emit:ymsp' = ['focus-space', 2] }
+'.s3' = { name = "Space: 3", 'emit:ymsp' = ['focus-space', 3] }
+'.s4' = { name = "Space: 4", 'emit:ymsp' = ['focus-space', 4] }
+'.s5' = { name = "Space: 5", 'emit:ymsp' = ['focus-space', 5] }
+'.s6' = { name = "Space: 6", 'emit:ymsp' = ['focus-space', 6] }
+'.s7' = { name = "Space: 7", 'emit:ymsp' = ['focus-space', 7] }
+'.s8' = { name = "Space: 8", 'emit:ymsp' = ['focus-space', 8] }
+'.s9' = { name = "Space: 9", 'emit:ymsp' = ['focus-space', 9] }
 
-'.m1' = { name = "Move (Window to Space): 1", shell = "yabai -m window --space 1" }
-'.m2' = { name = "Move (Window to Space): 2", shell = "yabai -m window --space 2" }
-'.m3' = { name = "Move (Window to Space): 3", shell = "yabai -m window --space 3" }
-'.m4' = { name = "Move (Window to Space): 4", shell = "yabai -m window --space 4" }
-'.m5' = { name = "Move (Window to Space): 5", shell = "yabai -m window --space 5" }
-'.m6' = { name = "Move (Window to Space): 6", shell = "yabai -m window --space 6" }
-'.m7' = { name = "Move (Window to Space): 7", shell = "yabai -m window --space 7" }
-'.m8' = { name = "Move (Window to Space): 8", shell = "yabai -m window --space 8" }
-'.m9' = { name = "Move (Window to Space): 9", shell = "yabai -m window --space 9" }
+'.m1' = { name = "Move (Window to Space): 1", 'emit:ymsp' = ['move-window-to-space', 1] }
+'.m2' = { name = "Move (Window to Space): 2", 'emit:ymsp' = ['move-window-to-space', 2] }
+'.m3' = { name = "Move (Window to Space): 3", 'emit:ymsp' = ['move-window-to-space', 3] }
+'.m4' = { name = "Move (Window to Space): 4", 'emit:ymsp' = ['move-window-to-space', 4] }
+'.m5' = { name = "Move (Window to Space): 5", 'emit:ymsp' = ['move-window-to-space', 5] }
+'.m6' = { name = "Move (Window to Space): 6", 'emit:ymsp' = ['move-window-to-space', 6] }
+'.m7' = { name = "Move (Window to Space): 7", 'emit:ymsp' = ['move-window-to-space', 7] }
+'.m8' = { name = "Move (Window to Space): 8", 'emit:ymsp' = ['move-window-to-space', 8] }
+'.m9' = { name = "Move (Window to Space): 9", 'emit:ymsp' = ['move-window-to-space', 9] }

@@ -1,1359 +1,10 @@
-import * as fs$1 from "node:fs";
-import fs from "node:fs";
+import { YMSP } from "yabai-master-stack-plugin";
 import os from "node:os";
-import * as util from "node:util";
-import path$1 from "node:path";
-import process$1 from "node:process";
-//#region \0rolldown/runtime.js
-var __commonJSMin = (cb, mod) => () => (mod || (cb((mod = { exports: {} }).exports, mod), cb = null), mod.exports);
-//#endregion
-//#region node_modules/yabai-master-stack-plugin/dist/rolldown-runtime-D7D4PA-g.mjs
-var __defProp = Object.defineProperty;
-var __exportAll = (all, no_symbols) => {
-	let target = {};
-	for (var name in all) __defProp(target, name, {
-		get: all[name],
-		enumerable: true
-	});
-	if (!no_symbols) __defProp(target, Symbol.toStringTag, { value: "Module" });
-	return target;
-};
-//#endregion
-//#region node_modules/mimic-fn/index.js
-const copyProperty = (to, from, property, ignoreNonConfigurable) => {
-	if (property === "length" || property === "prototype") return;
-	if (property === "arguments" || property === "caller") return;
-	const toDescriptor = Object.getOwnPropertyDescriptor(to, property);
-	const fromDescriptor = Object.getOwnPropertyDescriptor(from, property);
-	if (!canCopyProperty(toDescriptor, fromDescriptor) && ignoreNonConfigurable) return;
-	Object.defineProperty(to, property, fromDescriptor);
-};
-const canCopyProperty = function(toDescriptor, fromDescriptor) {
-	return toDescriptor === void 0 || toDescriptor.configurable || toDescriptor.writable === fromDescriptor.writable && toDescriptor.enumerable === fromDescriptor.enumerable && toDescriptor.configurable === fromDescriptor.configurable && (toDescriptor.writable || toDescriptor.value === fromDescriptor.value);
-};
-const changePrototype = (to, from) => {
-	const fromPrototype = Object.getPrototypeOf(from);
-	if (fromPrototype === Object.getPrototypeOf(to)) return;
-	Object.setPrototypeOf(to, fromPrototype);
-};
-const wrappedToString = (withName, fromBody) => `/* Wrapped ${withName}*/\n${fromBody}`;
-const toStringDescriptor = Object.getOwnPropertyDescriptor(Function.prototype, "toString");
-const toStringName = Object.getOwnPropertyDescriptor(Function.prototype.toString, "name");
-const changeToString = (to, from, name) => {
-	const withName = name === "" ? "" : `with ${name.trim()}() `;
-	const newToString = wrappedToString.bind(null, withName, from.toString());
-	Object.defineProperty(newToString, "name", toStringName);
-	Object.defineProperty(to, "toString", {
-		...toStringDescriptor,
-		value: newToString
-	});
-};
-function mimicFunction(to, from, { ignoreNonConfigurable = false } = {}) {
-	const { name } = to;
-	for (const property of Reflect.ownKeys(from)) copyProperty(to, from, property, ignoreNonConfigurable);
-	changePrototype(to, from);
-	changeToString(to, from, name);
-	return to;
-}
-//#endregion
-//#region node_modules/onetime/index.js
-const calledFunctions = /* @__PURE__ */ new WeakMap();
-const onetime = (function_, options = {}) => {
-	if (typeof function_ !== "function") throw new TypeError("Expected a function");
-	let returnValue;
-	let callCount = 0;
-	const functionName = function_.displayName || function_.name || "<anonymous>";
-	const onetime = function(...arguments_) {
-		calledFunctions.set(onetime, ++callCount);
-		if (callCount === 1) {
-			returnValue = function_.apply(this, arguments_);
-			function_ = null;
-		} else if (options.throw === true) throw new Error(`Function \`${functionName}\` can only be called once`);
-		return returnValue;
-	};
-	mimicFunction(onetime, function_);
-	calledFunctions.set(onetime, callCount);
-	return onetime;
-};
-onetime.callCount = (function_) => {
-	if (!calledFunctions.has(function_)) throw new Error(`The given function \`${function_.name}\` is not wrapped by the \`onetime\` package`);
-	return calledFunctions.get(function_);
-};
-//#endregion
-//#region node_modules/pathe/dist/shared/pathe.ff20891b.mjs
-const _DRIVE_LETTER_START_RE = /^[A-Za-z]:\//;
-function normalizeWindowsPath(input = "") {
-	if (!input) return input;
-	return input.replace(/\\/g, "/").replace(_DRIVE_LETTER_START_RE, (r) => r.toUpperCase());
-}
-const _UNC_REGEX = /^[/\\]{2}/;
-const _IS_ABSOLUTE_RE = /^[/\\](?![/\\])|^[/\\]{2}(?!\.)|^[A-Za-z]:[/\\]/;
-const _DRIVE_LETTER_RE = /^[A-Za-z]:$/;
-const _ROOT_FOLDER_RE = /^\/([A-Za-z]:)?$/;
-const normalize = function(path) {
-	if (path.length === 0) return ".";
-	path = normalizeWindowsPath(path);
-	const isUNCPath = path.match(_UNC_REGEX);
-	const isPathAbsolute = isAbsolute(path);
-	const trailingSeparator = path[path.length - 1] === "/";
-	path = normalizeString(path, !isPathAbsolute);
-	if (path.length === 0) {
-		if (isPathAbsolute) return "/";
-		return trailingSeparator ? "./" : ".";
-	}
-	if (trailingSeparator) path += "/";
-	if (_DRIVE_LETTER_RE.test(path)) path += "/";
-	if (isUNCPath) {
-		if (!isPathAbsolute) return `//./${path}`;
-		return `//${path}`;
-	}
-	return isPathAbsolute && !isAbsolute(path) ? `/${path}` : path;
-};
-const join = function(...arguments_) {
-	if (arguments_.length === 0) return ".";
-	let joined;
-	for (const argument of arguments_) if (argument && argument.length > 0) {
-		if (joined === void 0) joined = argument;
-		else joined += `/${argument}`;
-	}
-	if (joined === void 0) return ".";
-	return normalize(joined.replace(/\/\/+/g, "/"));
-};
-function cwd() {
-	if (typeof process !== "undefined" && typeof process.cwd === "function") return process.cwd().replace(/\\/g, "/");
-	return "/";
-}
-const resolve = function(...arguments_) {
-	arguments_ = arguments_.map((argument) => normalizeWindowsPath(argument));
-	let resolvedPath = "";
-	let resolvedAbsolute = false;
-	for (let index = arguments_.length - 1; index >= -1 && !resolvedAbsolute; index--) {
-		const path = index >= 0 ? arguments_[index] : cwd();
-		if (!path || path.length === 0) continue;
-		resolvedPath = `${path}/${resolvedPath}`;
-		resolvedAbsolute = isAbsolute(path);
-	}
-	resolvedPath = normalizeString(resolvedPath, !resolvedAbsolute);
-	if (resolvedAbsolute && !isAbsolute(resolvedPath)) return `/${resolvedPath}`;
-	return resolvedPath.length > 0 ? resolvedPath : ".";
-};
-function normalizeString(path, allowAboveRoot) {
-	let res = "";
-	let lastSegmentLength = 0;
-	let lastSlash = -1;
-	let dots = 0;
-	let char = null;
-	for (let index = 0; index <= path.length; ++index) {
-		if (index < path.length) char = path[index];
-		else if (char === "/") break;
-		else char = "/";
-		if (char === "/") {
-			if (lastSlash === index - 1 || dots === 1);
-			else if (dots === 2) {
-				if (res.length < 2 || lastSegmentLength !== 2 || res[res.length - 1] !== "." || res[res.length - 2] !== ".") {
-					if (res.length > 2) {
-						const lastSlashIndex = res.lastIndexOf("/");
-						if (lastSlashIndex === -1) {
-							res = "";
-							lastSegmentLength = 0;
-						} else {
-							res = res.slice(0, lastSlashIndex);
-							lastSegmentLength = res.length - 1 - res.lastIndexOf("/");
-						}
-						lastSlash = index;
-						dots = 0;
-						continue;
-					} else if (res.length > 0) {
-						res = "";
-						lastSegmentLength = 0;
-						lastSlash = index;
-						dots = 0;
-						continue;
-					}
-				}
-				if (allowAboveRoot) {
-					res += res.length > 0 ? "/.." : "..";
-					lastSegmentLength = 2;
-				}
-			} else {
-				if (res.length > 0) res += `/${path.slice(lastSlash + 1, index)}`;
-				else res = path.slice(lastSlash + 1, index);
-				lastSegmentLength = index - lastSlash - 1;
-			}
-			lastSlash = index;
-			dots = 0;
-		} else if (char === "." && dots !== -1) ++dots;
-		else dots = -1;
-	}
-	return res;
-}
-const isAbsolute = function(p) {
-	return _IS_ABSOLUTE_RE.test(p);
-};
-const toNamespacedPath = function(p) {
-	return normalizeWindowsPath(p);
-};
-const _EXTNAME_RE = /.(\.[^./]+)$/;
-const extname = function(p) {
-	const match = _EXTNAME_RE.exec(normalizeWindowsPath(p));
-	return match && match[1] || "";
-};
-const relative = function(from, to) {
-	const _from = resolve(from).replace(_ROOT_FOLDER_RE, "$1").split("/");
-	const _to = resolve(to).replace(_ROOT_FOLDER_RE, "$1").split("/");
-	if (_to[0][1] === ":" && _from[0][1] === ":" && _from[0] !== _to[0]) return _to.join("/");
-	const _fromCopy = [..._from];
-	for (const segment of _fromCopy) {
-		if (_to[0] !== segment) break;
-		_from.shift();
-		_to.shift();
-	}
-	return [..._from.map(() => ".."), ..._to].join("/");
-};
-const dirname = function(p) {
-	const segments = normalizeWindowsPath(p).replace(/\/$/, "").split("/").slice(0, -1);
-	if (segments.length === 1 && _DRIVE_LETTER_RE.test(segments[0])) segments[0] += "/";
-	return segments.join("/") || (isAbsolute(p) ? "/" : ".");
-};
-const format = function(p) {
-	const segments = [
-		p.root,
-		p.dir,
-		p.base ?? p.name + p.ext
-	].filter(Boolean);
-	return normalizeWindowsPath(p.root ? resolve(...segments) : segments.join("/"));
-};
-const basename = function(p, extension) {
-	const lastSegment = normalizeWindowsPath(p).split("/").pop();
-	return extension && lastSegment.endsWith(extension) ? lastSegment.slice(0, -extension.length) : lastSegment;
-};
-const parse$1 = function(p) {
-	const root = normalizeWindowsPath(p).split("/").shift() || "/";
-	const base = basename(p);
-	const extension = extname(base);
-	return {
-		root,
-		dir: dirname(p),
-		base,
-		ext: extension,
-		name: base.slice(0, base.length - extension.length)
-	};
-};
-const path = {
-	__proto__: null,
-	basename,
-	delimiter: ":",
-	dirname,
-	extname,
-	format,
-	isAbsolute,
-	join,
-	normalize,
-	normalizeString,
-	parse: parse$1,
-	relative,
-	resolve,
-	sep: "/",
-	toNamespacedPath
-};
-//#endregion
-//#region node_modules/shell-quote/quote.js
-var require_quote = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	/** @import { ControlOperator } from './parse' */
-	/** @type {ControlOperator['op'][]} */
-	var OPS = [
-		"||",
-		"&&",
-		";;",
-		"|&",
-		"<(",
-		"<<<",
-		">>",
-		">&",
-		"<&",
-		"&",
-		";",
-		"(",
-		")",
-		"|",
-		"<",
-		">"
-	];
-	var LINE_TERMINATORS = /[\n\r\u2028\u2029]/;
-	var GLOB_SHELL_SPECIAL = /[\s#!"$&'():;<=>@\\^`|]/g;
-	/** @type {typeof import('./quote')} */
-	module.exports = function quote(xs) {
-		return xs.map(function(s) {
-			if (s === "") return "''";
-			if (s && typeof s === "object") {
-				if ("op" in s && s.op === "glob") {
-					if (typeof s.pattern !== "string") throw new TypeError("glob token requires a string `pattern`");
-					if (LINE_TERMINATORS.test(s.pattern)) throw new TypeError("glob `pattern` must not contain line terminators");
-					return s.pattern.replace(GLOB_SHELL_SPECIAL, "\\$&");
-				}
-				if ("op" in s && typeof s.op === "string") {
-					if (OPS.indexOf(s.op) < 0) throw new TypeError("invalid `op` value: " + JSON.stringify(s.op));
-					return s.op.replace(/[\s\S]/g, "\\$&");
-				}
-				if ("comment" in s && typeof s.comment === "string") {
-					if (LINE_TERMINATORS.test(s.comment)) throw new TypeError("`comment` must not contain line terminators");
-					return "#" + s.comment;
-				}
-				throw new TypeError("unrecognized object token shape");
-			}
-			if (/["\s\\]/.test(s) && !/'/.test(s)) return "'" + s.replace(/(['])/g, "\\$1") + "'";
-			if (/["'\s]/.test(s)) return "\"" + s.replace(/(["\\$`!])/g, "\\$1") + "\"";
-			return String(s).replace(/([A-Za-z]:)?([#!"$&'()*,:;<=>?@[\\\]^`{|}~])/g, "$1\\$2");
-		}).join(" ");
-	};
-}));
-//#endregion
-//#region node_modules/shell-quote/parse.js
-var require_parse = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	/**
-	* @import {
-	* 	ControlOperator,
-	* 	Env,
-	* 	GlobPattern,
-	* 	ParseEntry,
-	* } from './parse' */
-	var CONTROL = "(?:" + [
-		"\\|\\|",
-		"\\&\\&",
-		";;",
-		"\\|\\&",
-		"\\<\\(",
-		"\\<\\<\\<",
-		">>",
-		">\\&",
-		"<\\&",
-		"[&;()|<>]"
-	].join("|") + ")";
-	var controlRE = new RegExp("^" + CONTROL + "$");
-	var META = "|&;()<> \\t";
-	var SINGLE_QUOTE = "'([^']*?)'";
-	var DOUBLE_QUOTE = "\"((\\\\\"|[^\"])*?)\"";
-	var hash = /^#$/;
-	var SQ = "'";
-	var DQ = "\"";
-	var DS = "$";
-	var TOKEN = "";
-	var mult = 4294967296;
-	for (var i = 0; i < 4; i++) TOKEN += (mult * Math.random()).toString(16);
-	var startsWithToken = new RegExp("^" + TOKEN);
-	/**
-	* @param {string} s
-	* @param {RegExp} r
-	*/
-	function matchAll(s, r) {
-		var origIndex = r.lastIndex;
-		var matches = [];
-		var matchObj;
-		while (matchObj = r.exec(s)) {
-			matches[matches.length] = matchObj;
-			if (r.lastIndex === matchObj.index) r.lastIndex += 1;
-		}
-		r.lastIndex = origIndex;
-		return matches;
-	}
-	/**
-	* @param {Env} env
-	* @param {string} pre
-	* @param {string} key
-	*/
-	function getVar(env, pre, key) {
-		var r = typeof env === "function" ? env(key) : env[key];
-		if (typeof r === "undefined" && key != "") r = "";
-		else if (typeof r === "undefined") r = "$";
-		if (typeof r === "object") return pre + TOKEN + JSON.stringify(r) + TOKEN;
-		return pre + r;
-	}
-	/**
-	* @param {string} string
-	* @param {Env} [env]
-	* @param {{ escape?: string, splitUnquoted?: boolean | string }} [opts]
-	* @returns {ParseEntry[]}
-	*/
-	function parseInternal(string, env, opts) {
-		if (!opts) opts = {};
-		var BS = opts.escape || "\\";
-		var ifs = opts.splitUnquoted === true ? " 	\n" : typeof opts.splitUnquoted === "string" ? opts.splitUnquoted : "";
-		var BAREWORD = "(\\" + BS + "['\"" + META + "]|[^\\s'\"" + META + "])+";
-		var matches = matchAll(string, new RegExp(["(" + CONTROL + ")", "(" + BAREWORD + "|" + DOUBLE_QUOTE + "|" + SINGLE_QUOTE + ")+"].join("|"), "g"));
-		if (matches.length === 0) return [];
-		if (!env) env = {};
-		var commented = false;
-		return matches.map(function(match) {
-			var s = match[0];
-			if (!s || commented) return;
-			if (controlRE.test(s)) return { op: s };
-			/** @type {string | boolean} */
-			var quote = false;
-			var esc = false;
-			var out = "";
-			/** @type {string[]} */
-			var words = [];
-			var sawQuote = false;
-			/** @type {number | null} */
-			var pendingNw = null;
-			var isGlob = false;
-			/** @type {number} */
-			var i;
-			function parseEnvVar() {
-				i += 1;
-				/** @type {number | RegExpMatchArray | null} */
-				var varend;
-				/** @type {string} */
-				var varname;
-				var char = s.charAt(i);
-				if (char === "{") {
-					i += 1;
-					if (s.charAt(i) === "}") throw new Error("Bad substitution: " + s.slice(i - 2, i + 1));
-					var depth = 1;
-					varend = i;
-					while (depth > 0 && varend < s.length) {
-						if (s.charAt(varend) === "{" && s.charAt(varend - 1) === "$") depth += 1;
-						else if (s.charAt(varend) === "}") depth -= 1;
-						varend += 1;
-					}
-					if (depth !== 0) throw new Error("Bad substitution: " + s.slice(i));
-					varend -= 1;
-					varname = s.slice(i, varend);
-					i = varend;
-				} else if (/[*@#?$!_-]/.test(char)) {
-					varname = char;
-					i += 1;
-				} else {
-					var slicedFromI = s.slice(i);
-					varend = slicedFromI.match(/[^\w\d_]/);
-					if (!varend) {
-						varname = slicedFromI;
-						i = s.length;
-					} else {
-						varname = slicedFromI.slice(0, varend.index);
-						i += varend.index - 1;
-					}
-				}
-				return getVar(env, "", varname);
-			}
-			function flushRun() {
-				if (pendingNw === null) return;
-				if (pendingNw === 0) {
-					if (out !== "") {
-						words[words.length] = out;
-						out = "";
-					}
-				} else {
-					words[words.length] = out;
-					out = "";
-					for (var fe = 1; fe < pendingNw; fe += 1) words[words.length] = "";
-				}
-				pendingNw = null;
-			}
-			for (i = 0; i < s.length; i++) {
-				var c = s.charAt(i);
-				if (ifs && c !== DS) flushRun();
-				isGlob = isGlob || !quote && (c === "*" || c === "?");
-				if (esc) {
-					out += c;
-					esc = false;
-				} else if (quote) {
-					if (c === quote) quote = false;
-					else if (quote == SQ) out += c;
-					else if (c === BS) {
-						i += 1;
-						c = s.charAt(i);
-						if (c === DQ || c === BS || c === DS) out += c;
-						else out += BS + c;
-					} else if (c === DS) out += parseEnvVar();
-					else out += c;
-				} else if (c === DQ || c === SQ) {
-					quote = c;
-					sawQuote = true;
-				} else if (controlRE.test(c)) return { op: s };
-				else if (hash.test(c)) {
-					commented = true;
-					var commentObj = { comment: string.slice(match.index + i + 1) };
-					if (out.length) return [out, commentObj];
-					return [commentObj];
-				} else if (c === BS) esc = true;
-				else if (c === DS) {
-					var value = parseEnvVar();
-					if (!ifs) out += value;
-					else for (var vi = 0; vi < value.length; vi += 1) {
-						var vc = value.charAt(vi);
-						if (ifs.indexOf(vc) < 0) {
-							flushRun();
-							out += vc;
-						} else if (pendingNw === null) pendingNw = vc === " " || vc === "	" || vc === "\n" ? 0 : 1;
-						else if (vc !== " " && vc !== "	" && vc !== "\n") pendingNw += 1;
-					}
-				} else out += c;
-			}
-			if (isGlob) return {
-				op: "glob",
-				pattern: out
-			};
-			if (ifs) {
-				if (pendingNw !== null && pendingNw > 0) {
-					words[words.length] = out;
-					out = "";
-					for (var te = 1; te < pendingNw; te += 1) words[words.length] = "";
-				}
-				if (out !== "" || sawQuote && words.length === 0) words[words.length] = out;
-				return words;
-			}
-			return out;
-		}).reduce(function(prev, arg) {
-			if (typeof arg === "undefined") return prev;
-			/** @type {ParseEntry[]} */ [].concat(arg).forEach(function(entry) {
-				prev[prev.length] = entry;
-			});
-			return prev;
-		}, []);
-	}
-	/** @type {typeof import('./parse')} */
-	module.exports = function parse(s, env, opts) {
-		var mapped = parseInternal(s, env, opts);
-		if (typeof env !== "function") return mapped;
-		return mapped.reduce(function(acc, s) {
-			if (typeof s === "object") {
-				acc[acc.length] = s;
-				return acc;
-			}
-			var xs = s.split(RegExp("(" + TOKEN + ".*?" + TOKEN + ")", "g"));
-			if (xs.length === 1) {
-				acc[acc.length] = xs[0];
-				return acc;
-			}
-			xs.filter(Boolean).forEach(function(x) {
-				acc[acc.length] = startsWithToken.test(x) ? JSON.parse(x.split(TOKEN)[1]) : x;
-			});
-			return acc;
-		}, []);
-	};
-}));
-//#endregion
-//#region node_modules/tiny-invariant/dist/esm/tiny-invariant.js
-var import_shell_quote = (/* @__PURE__ */ __commonJSMin(((exports) => {
-	exports.quote = require_quote();
-	exports.parse = require_parse();
-})))();
-var isProduction = process.env.NODE_ENV === "production";
-var prefix = "Invariant failed";
-function invariant(condition, message) {
-	if (condition) return;
-	if (isProduction) throw new Error(prefix);
-	var provided = typeof message === "function" ? message() : message;
-	var value = provided ? "".concat(prefix, ": ").concat(provided) : prefix;
-	throw new Error(value);
-}
-//#endregion
-//#region node_modules/yabai-master-stack-plugin/dist/tasks-map-Cu1D765k.mjs
-const getConfig = onetime(() => {
-	try {
-		const configPath = path.join(os.homedir(), ".config/ymsp/ymsp.config.json");
-		return {
-			masterPosition: "right",
-			moveNewWindowsToMaster: false,
-			debug: false,
-			yabaiPath: "/usr/local/bin/yabai",
-			...JSON.parse(fs$1.readFileSync(configPath).toString())
-		};
-	} catch (error) {
-		const err = error;
-		if (err.code === "ENOENT") throw new Error("The config file at ~/.config/ymsp/ymsp.config.json file was not found.");
-		else throw err;
-	}
-});
-function debug(cb) {
-	const { debug: isDebugOn } = getConfig();
-	if (isDebugOn) {
-		fs.appendFileSync(path.join(os.homedir(), ".ymsp-log"), util.inspect(cb()) + "\n");
-		console.error(cb());
-	}
-}
-const ymspConfigDirpath$1 = path$1.join(os.homedir(), ".config/ymsp");
-const lockFilepath = path$1.join(ymspConfigDirpath$1, "ymsp.lock");
-function defineTask(cb) {
-	return async () => {
-		fs.rmSync(lockFilepath, {
-			force: true,
-			recursive: true
-		});
-		fs.writeFileSync(lockFilepath, process.pid.toString());
-		return cb().catch(handleMasterError);
-	};
-}
-function handleMasterError(error) {
-	if (error.code === "ELOCKED") debug(() => "Lock found...aborting");
-	else console.error(error);
-}
-/** Read stdout from a yabai subprocess created with piped output. */
-async function getYabaiOutput(yabaiProcess) {
-	return new Response(yabaiProcess.stdout).text();
-}
-async function getDisplays() {
-	const { yabaiPath } = getConfig();
-	const yabaiOutput = await getYabaiOutput(Bun.spawn([
-		yabaiPath,
-		"-m",
-		"query",
-		"--displays"
-	]));
-	return JSON.parse(yabaiOutput);
-}
-async function getFocusedDisplay() {
-	const { yabaiPath } = getConfig();
-	const yabaiOutput = await getYabaiOutput(Bun.spawn([
-		yabaiPath,
-		"-m",
-		"query",
-		"--displays",
-		"--display"
-	]));
-	return JSON.parse(yabaiOutput);
-}
-async function getSpaces() {
-	const { yabaiPath } = getConfig();
-	const yabaiOutput = await getYabaiOutput(Bun.spawn([
-		yabaiPath,
-		"-m",
-		"query",
-		"--spaces"
-	], { stdout: "pipe" }));
-	return JSON.parse(yabaiOutput);
-}
-async function getFocusedSpace() {
-	const { yabaiPath } = getConfig();
-	const yabaiOutput = await getYabaiOutput(Bun.spawn([
-		yabaiPath,
-		"-m",
-		"query",
-		"--spaces",
-		"--space"
-	], { stdout: "pipe" }));
-	return JSON.parse(yabaiOutput);
-}
-const stateFilePath = path.join(os.homedir(), ".config/ymsp/state.json");
-function writeState(state) {
-	fs.writeFileSync(stateFilePath, JSON.stringify(state));
-}
-async function readState() {
-	if (fs.existsSync(stateFilePath)) {
-		const data = JSON.parse(fs.readFileSync(stateFilePath).toString());
-		const spaces = await getSpaces();
-		for (const space of spaces) if (data[space.id.toString()] === void 0) data[space.id.toString()] = { numMasterWindows: 1 };
-		for (const spaceId of Object.keys(spaces)) if (!spaces.some((space) => space.id.toString() === spaceId)) data[spaceId] = void 0;
-		return data;
-	} else {
-		const defaultState = {};
-		const spaces = await getSpaces();
-		for (const space of spaces) defaultState[space.id] = { numMasterWindows: 1 };
-		const defaultStateJson = JSON.stringify(defaultState);
-		fs.writeFileSync(stateFilePath, defaultStateJson);
-		return defaultState;
-	}
-}
-const ymspConfigDirpath = path.join(os.homedir(), ".config/ymsp");
-const lockfilePath = path.join(ymspConfigDirpath, "ymsp.lock");
-async function executeYabaiCommand(command) {
-	const { yabaiPath } = getConfig();
-	try {
-		if (fs.readFileSync(lockfilePath, "utf8") !== process.pid.toString()) throw Object.assign(/* @__PURE__ */ new Error("Lockfile is no longer owned by this process"), { code: "ELOCKED" });
-	} catch {
-		throw Object.assign(/* @__PURE__ */ new Error("Lockfile is no longer owned by this process"), { code: "ELOCKED" });
-	}
-	const yabaiOutput = await getYabaiOutput(Bun.spawn([yabaiPath, ...(0, import_shell_quote.parse)(command)]));
-	await this.refreshWindowsData();
-	return yabaiOutput;
-}
-/**
-There is always a "line" dividing the master windows from the secondary windows. To find this line, we use two observations (the following apply for a master position on the right):
-1. The top-right window is always on the right side of the dividing line.
-2. If there is more than one master window, the dividing line must cross the left side of two windows.
-Using these observations, we can loop through the windows in descending x-coordinate starting from the top-right window and for each pair of windows that share x-coordinates, we check if the numMasterWindows is less than the number of windows we've iterated through, and if so, return the x-coordinate of the currently processed window.
-
-If the master position is on the left, then we start searching starting from the top-left window.
-*/
-function getDividingLineXCoordinate() {
-	if (getConfig().masterPosition === "right") {
-		const topRightWindow = this.getTopRightWindow();
-		if (topRightWindow === void 0) throw new Error("getDividngLineXCoordinate() was called when there are no windows.");
-		debug(() => `Top-right window: ${topRightWindow.app}`);
-		if (this.expectedCurrentNumMasterWindows === 1) return topRightWindow.frame.x;
-		const nonStackWindows = this.windowsData.filter((window) => !this.isStackWindow(window));
-		const eligibleWindows = nonStackWindows.filter((window) => window.frame.x <= topRightWindow.frame.x).sort((window1, window2) => window2.frame.x - window1.frame.x);
-		const numWindowsToRightOfTopRightWindow = nonStackWindows.length - eligibleWindows.length;
-		if (numWindowsToRightOfTopRightWindow >= this.expectedCurrentNumMasterWindows) return topRightWindow.frame.x;
-		for (let i = 0; i < eligibleWindows.length - 1; i += 1) {
-			const curWindow = eligibleWindows[i];
-			const nextWindow = eligibleWindows[i + 1];
-			invariant(curWindow);
-			invariant(nextWindow);
-			if (curWindow.frame.x === nextWindow.frame.x && numWindowsToRightOfTopRightWindow + i + 2 >= this.expectedCurrentNumMasterWindows) return curWindow.frame.x;
-		}
-		return topRightWindow.frame.x;
-	} else {
-		const topLeftWindow = this.getTopLeftWindow();
-		if (topLeftWindow === void 0) throw new Error("getDividingLineXCoordinate() was called when there are no windows.");
-		debug(() => `Top-left window: ${topLeftWindow.app}`);
-		const nonMasterWindows = this.windowsData.filter((window) => !this.isWindowTouchingLeftEdge(window)).sort((window1, window2) => window1.frame.x - window2.frame.x);
-		if (nonMasterWindows.length === 0) return this.display.frame.x;
-		const numMasterWindows = this.windowsData.length - nonMasterWindows.length;
-		if (numMasterWindows >= this.expectedCurrentNumMasterWindows) {
-			invariant(nonMasterWindows[0]);
-			return nonMasterWindows[0].frame.x;
-		}
-		for (let i = 0; i < nonMasterWindows.length - 1; i += 1) {
-			const curWindow = nonMasterWindows[i];
-			const nextWindow = nonMasterWindows[i + 1];
-			invariant(curWindow);
-			invariant(nextWindow);
-			if (curWindow.frame.x === nextWindow.frame.x && numMasterWindows + i + 2 >= this.expectedCurrentNumMasterWindows) return curWindow.frame.x;
-		}
-		invariant(nonMasterWindows[0]);
-		return nonMasterWindows[0].frame.x;
-	}
-}
-async function isValidLayout(args) {
-	debug(() => "Starting valid layout check...");
-	if (this.windowsData.length === 0) return { status: true };
-	const targetNumMasterWindows = args?.targetNumMasterWindows ?? this.expectedCurrentNumMasterWindows;
-	if (targetNumMasterWindows > this.windowsData.length && !this.windowsData.every((window) => this.isWindowTouchingLeftEdge(window))) return {
-		status: false,
-		reason: "The number of master windows is greater than the number of windows and not all windows are touching the left edge."
-	};
-	else {
-		const curNumMasterWindows = this.getMasterWindows().length;
-		if (targetNumMasterWindows !== curNumMasterWindows) return {
-			status: false,
-			reason: `Number of master windows does not equal expected number of master windows (${curNumMasterWindows}/${targetNumMasterWindows})`
-		};
-		for (const window of this.windowsData) if (this.isMiddleWindow(window)) return {
-			status: false,
-			reason: `A middle window (${window.app}) was detected.`
-		};
-		return { status: true };
-	}
-}
-async function updateWindows({ targetNumMasterWindows }) {
-	debug(() => `updateWindows() called with targetNumMasterWindows = ${targetNumMasterWindows}`);
-	await this.columnizeMasterWindows();
-	await this.columnizeStackWindows();
-	const layoutValidity = await this.isValidLayout({ targetNumMasterWindows });
-	if (layoutValidity.status) {
-		debug(() => "Valid layout detected; no changes were made.");
-		return;
-	} else debug(() => `Invalid layout detected: ${layoutValidity.reason}. Updating windows...`);
-	const numWindows = this.windowsData.length;
-	if (targetNumMasterWindows !== numWindows && !this.doesStackExist()) {
-		debug(() => "Stack does not exist, creating it...");
-		await this.createStack();
-	}
-	if (targetNumMasterWindows === numWindows) {
-		for (const window of this.windowsData) if (window["split-type"] === "vertical") await this.executeYabaiCommand(`-m window ${window.id} --toggle split`);
-	}
-	if (numWindows > 1) {
-		const masterWindows = this.getMasterWindows();
-		debug(() => `Master windows: ${masterWindows.map((window) => window.app).join(",")}`);
-		let curNumMasterWindows = masterWindows.length;
-		if (curNumMasterWindows > targetNumMasterWindows) {
-			debug(() => `Too many master windows (${curNumMasterWindows}/${targetNumMasterWindows}).`);
-			masterWindows.sort((window1, window2) => window1.frame.y === window2.frame.y ? window1.frame.x - window2.frame.x : window1.frame.y - window2.frame.y);
-			while (curNumMasterWindows > targetNumMasterWindows) {
-				const masterWindow = masterWindows.pop();
-				debug(() => `Moving master window ${masterWindow.app} to stack.`);
-				await this.moveWindowToStack(masterWindow);
-				curNumMasterWindows -= 1;
-			}
-		}
-		let middleWindows;
-		while ((middleWindows = this.getMiddleWindows()).length > 0) {
-			const middleWindow = middleWindows[0];
-			invariant(middleWindow);
-			debug(() => `Middle window ${middleWindow.app} detected.`);
-			if (curNumMasterWindows < targetNumMasterWindows) {
-				debug(() => `Moving middle window ${middleWindow.app} to master.`);
-				await this.moveWindowToMaster(middleWindow);
-				curNumMasterWindows += 1;
-			} else {
-				debug(() => `Moving middle window ${middleWindow.app} to stack.`);
-				await this.moveWindowToStack(middleWindow);
-			}
-		}
-		const stackWindows = this.getStackWindows();
-		stackWindows.sort((window1, window2) => window1.frame.x === window2.frame.x ? window2.frame.y - window1.frame.y : window2.frame.x - window1.frame.x);
-		while (curNumMasterWindows < targetNumMasterWindows) {
-			console.info(`Not enough master windows (${curNumMasterWindows}/${targetNumMasterWindows})`);
-			const stackWindow = stackWindows.pop();
-			debug(() => `Moving stack window ${stackWindow.app} to master.`);
-			await this.moveWindowToMaster(stackWindow);
-			curNumMasterWindows += 1;
-		}
-	}
-	if ((await this.isValidLayout({ targetNumMasterWindows })).status) debug(() => "updateWindows() was successful.");
-	else throw new Error(`updateWindows() ended with an invalid layout; reason: ${layoutValidity.reason}`);
-	this.expectedCurrentNumMasterWindows = targetNumMasterWindows;
-}
-/**
-If the master position is on the right, a window which is to the right of the dividing line is considered a master window.
-If the master position is on the left, a window that is touching the left edge is considered a master window.
-*/
-function isMasterWindow(window) {
-	if (getConfig().masterPosition === "right") {
-		const dividingLineXCoordinate = this.getDividingLineXCoordinate();
-		return window.frame.x >= dividingLineXCoordinate;
-	} else return this.isWindowTouchingLeftEdge(window);
-}
-function getMasterWindows() {
-	if (getConfig().masterPosition === "right") {
-		const dividingLineXCoordinate = this.getDividingLineXCoordinate();
-		return this.windowsData.filter((window) => window.frame.x >= dividingLineXCoordinate);
-	} else return this.windowsData.filter((window) => this.isWindowTouchingLeftEdge(window));
-}
-function getTopMasterWindow() {
-	return this.getTopWindow(this.getMasterWindows());
-}
-function getBottomMasterWindow() {
-	return this.getBottomWindow(this.getMasterWindows());
-}
-function getWidestMasterWindow() {
-	let widestMasterWindow;
-	for (const window of this.getMasterWindows()) if (widestMasterWindow === void 0 || window.frame.w > widestMasterWindow.frame.w) widestMasterWindow = window;
-	return widestMasterWindow;
-}
-async function moveWindowToMaster$1(window) {
-	debug(() => `Moving window ${window.app} to master.`);
-	if (this.expectedCurrentNumMasterWindows < this.windowsData.length) try {
-		if (getConfig().masterPosition === "right") await this.executeYabaiCommand(`-m window ${window.id} --warp east`);
-		else await this.executeYabaiCommand(`-m window ${window.id} --warp west`);
-	} catch {}
-	if (this.isMasterWindow(window)) return;
-	const masterWindow = this.getWidestMasterWindow();
-	if (masterWindow === void 0 || masterWindow.id === window.id) return;
-	await this.executeYabaiCommand(`-m window ${window.id} --warp ${masterWindow.id}`);
-	window = this.getUpdatedWindowData(window);
-	if (window["split-type"] === "vertical") await this.executeYabaiCommand(`-m window ${window.id} --toggle split`);
-}
-/**
-Turns the master into a column by making sure the split direction of all the master windows
-is horizontal.
-*/
-async function columnizeMasterWindows() {
-	const masterWindows = this.getMasterWindows();
-	if (masterWindows.length > 1) for (const masterWindow of masterWindows) {
-		const window = this.getUpdatedWindowData(masterWindow);
-		if (window["split-type"] === "vertical") await this.executeYabaiCommand(`-m window ${window.id} --toggle split`);
-	}
-}
-async function moveWindowToStack(window) {
-	if (this.expectedCurrentNumMasterWindows === this.windowsData.length) {
-		debug(() => `Skipped moving window ${window.app} to stack because there is no stack.`);
-		return;
-	}
-	debug(() => `Moving window ${window.app} to stack.`);
-	await this.columnizeStackWindows();
-	if (this.windowsData.length === 2) {
-		if (window["split-type"] === "horizontal") await this.executeYabaiCommand(`-m window ${window.id} --toggle split`);
-		return;
-	}
-	if (this.isStackWindow(window)) return;
-	const stackWindow = this.getWidestStackWindow();
-	if (stackWindow === void 0 || stackWindow.id === window.id) return;
-	await this.executeYabaiCommand(`-m window ${window.id} --warp ${stackWindow.id}`);
-	window = this.getUpdatedWindowData(window);
-	const splitType = window["split-type"];
-	if (this.windowsData.length === 2) {
-		if (splitType === "horizontal") await this.executeYabaiCommand(`-m window ${window.id} --toggle split`);
-	} else if (splitType === "vertical") await this.executeYabaiCommand(`-m window ${window.id} --toggle split`);
-}
-function getTopWindow(windows) {
-	if (windows.length === 0) return;
-	let topWindow = windows[0];
-	invariant(topWindow);
-	for (const w of windows) if (w.frame.y < topWindow.frame.y) topWindow = w;
-	return topWindow;
-}
-function isTopWindow(windows, window) {
-	return this.getTopWindow(windows)?.id === window.id;
-}
-function getBottomWindow(windows) {
-	if (windows.length === 0) return;
-	let bottomWindow = windows[0];
-	invariant(bottomWindow);
-	for (const w of windows) if (w.frame.y > bottomWindow.frame.y) bottomWindow = w;
-	return bottomWindow;
-}
-function isBottomWindow(windows, window) {
-	return this.getBottomWindow(windows)?.id === window.id;
-}
-/**
-The top-left window is the window with the lowest y-coordinate and the lowest x-coordinate.
-*/
-function getTopLeftWindow() {
-	const leftWindows = this.windowsData.filter((window) => this.isWindowTouchingLeftEdge(window));
-	if (leftWindows.length === 0) return;
-	let topLeftWindow = leftWindows[0];
-	invariant(topLeftWindow);
-	for (const window of leftWindows) if (window.frame.y <= topLeftWindow.frame.y) topLeftWindow = window;
-	return topLeftWindow;
-}
-/**
-The top-right window is the rightmost window with the lowest y-coordinate.
-*/
-function getTopRightWindow() {
-	if (this.windowsData.length === 0) return;
-	invariant(this.windowsData[0]);
-	let lowestYCoordinate = this.windowsData[0].frame.y;
-	for (const window of this.windowsData) if (window.frame.y < lowestYCoordinate) lowestYCoordinate = window.frame.y;
-	const topWindows = this.windowsData.filter((window) => window.frame.y === lowestYCoordinate);
-	let topRightWindow = topWindows[0];
-	invariant(topRightWindow);
-	for (const window of topWindows) if (window.frame.x > topRightWindow.frame.x) topRightWindow = window;
-	return topRightWindow;
-}
-function isMiddleWindow(window) {
-	return !this.isStackWindow(window) && !this.isMasterWindow(window);
-}
-function getMiddleWindows() {
-	return this.windowsData.filter((window) => this.isMiddleWindow(window));
-}
-function isWindowTouchingLeftEdge(window) {
-	return window.frame.x === this.display.frame.x;
-}
-/**
-If the window's frame has an x equal to the x of the display, it is a stack window
-*/
-function isStackWindow(window) {
-	if (getConfig().masterPosition === "right") return this.isWindowTouchingLeftEdge(window);
-	else {
-		const dividingLineXCoordinate = this.getDividingLineXCoordinate();
-		return window.frame.x === dividingLineXCoordinate;
-	}
-}
-function getWidestStackWindow() {
-	let widestStackWindow;
-	for (const window of this.getStackWindows()) if (widestStackWindow === void 0 || window.frame.w > widestStackWindow.frame.w) widestStackWindow = window;
-	return widestStackWindow;
-}
-function getTopStackWindow() {
-	return this.getTopWindow(this.getStackWindows());
-}
-function getBottomStackWindow() {
-	return this.getBottomWindow(this.getStackWindows());
-}
-/**
-In the event that the windows get badly rearranged, we force all windows to become vertically split to ensure that there exists a stack.
-*/
-async function createStack() {
-	debug(() => "Creating stack...");
-	for (const window of this.windowsData) if (window["split-type"] === "horizontal") await this.executeYabaiCommand(`-m window ${window.id} --toggle split`);
-	await this.columnizeStackWindows();
-	await this.columnizeMasterWindows();
-}
-/**
-If the top-right window has a x-coordinate of 0, or if the stack dividing line is equal to 0, then the stack does not exist. This applies to master positions on the left and on the right.
-*/
-function doesStackExist() {
-	const topRightWindow = this.getTopRightWindow();
-	if (topRightWindow === void 0) return false;
-	return topRightWindow.frame.x !== 0;
-}
-/**
-Turns the stack into a column by making sure the split direction of all the stack windows
-is horizontal
-*/
-async function columnizeStackWindows() {
-	if (this.expectedCurrentNumMasterWindows === this.windowsData.length) {
-		debug(() => "Skipped columnizing stack windows because there is no stack.");
-		return;
-	}
-	const stackWindows = this.getStackWindows();
-	if (stackWindows.length > 1) for (const stackWindow of stackWindows) {
-		const window = this.getUpdatedWindowData(stackWindow);
-		if (window["split-type"] === "vertical") await this.executeYabaiCommand(`-m window ${window.id} --toggle split`);
-	}
-}
-function getStackWindows() {
-	return this.windowsData.filter((window) => this.isStackWindow(window));
-}
-function validateState(state) {
-	const spaceState = state[this.space.id];
-	invariant(spaceState);
-	if (this.windowsData.length < this.expectedCurrentNumMasterWindows) {
-		this.expectedCurrentNumMasterWindows = this.windowsData.length;
-		spaceState.numMasterWindows = this.windowsData.length;
-	}
-	if (spaceState.numMasterWindows <= 0) spaceState.numMasterWindows = 1;
-	writeState(state);
-}
-async function getWindowsData() {
-	const { yabaiPath } = getConfig();
-	const yabaiOutput = await getYabaiOutput(Bun.spawn([
-		yabaiPath,
-		"-m",
-		"query",
-		"--windows"
-	], { stdout: "pipe" }));
-	return JSON.parse(yabaiOutput).filter((window) => {
-		if (window["is-floating"] || window.display !== this.display.index || window.space !== this.space.index) return false;
-		const isMinimized = window["is-minimized"];
-		const isHidden = window["is-hidden"];
-		const isVisible = window["is-visible"];
-		if (isMinimized || isHidden || !isVisible) return false;
-		return true;
-	});
-}
-async function refreshWindowsData() {
-	const newWindowsData = await this.getWindowsData();
-	this.windowsData = newWindowsData;
-}
-async function initialize() {
-	this.windowsData = await this.getWindowsData();
-}
-function getUpdatedWindowData(window) {
-	return this.windowsData.find((win) => window.id === win.id);
-}
-function getWindowData({ processId, windowId }) {
-	if (processId === void 0 && windowId === void 0) throw new Error("Must provide at least one of processId or windowId");
-	const windowData = this.windowsData.find((window) => window.pid === Number(processId) || window.id === Number(windowId));
-	if (windowData === void 0) {
-		if (processId === void 0) {
-			invariant(windowId);
-			throw new Error(`Window with id ${windowId} not found.`);
-		} else throw new Error(`Window with pid ${processId} not found.`);
-	}
-	return windowData;
-}
-function getFocusedWindow() {
-	return this.windowsData.find((w) => w["has-focus"]);
-}
-var methods_exports = /* @__PURE__ */ __exportAll({
-	columnizeMasterWindows: () => columnizeMasterWindows,
-	columnizeStackWindows: () => columnizeStackWindows,
-	createStack: () => createStack,
-	doesStackExist: () => doesStackExist,
-	executeYabaiCommand: () => executeYabaiCommand,
-	getBottomMasterWindow: () => getBottomMasterWindow,
-	getBottomStackWindow: () => getBottomStackWindow,
-	getBottomWindow: () => getBottomWindow,
-	getDividingLineXCoordinate: () => getDividingLineXCoordinate,
-	getFocusedWindow: () => getFocusedWindow,
-	getMasterWindows: () => getMasterWindows,
-	getMiddleWindows: () => getMiddleWindows,
-	getStackWindows: () => getStackWindows,
-	getTopLeftWindow: () => getTopLeftWindow,
-	getTopMasterWindow: () => getTopMasterWindow,
-	getTopRightWindow: () => getTopRightWindow,
-	getTopStackWindow: () => getTopStackWindow,
-	getTopWindow: () => getTopWindow,
-	getUpdatedWindowData: () => getUpdatedWindowData,
-	getWidestMasterWindow: () => getWidestMasterWindow,
-	getWidestStackWindow: () => getWidestStackWindow,
-	getWindowData: () => getWindowData,
-	getWindowsData: () => getWindowsData,
-	initialize: () => initialize,
-	isBottomWindow: () => isBottomWindow,
-	isMasterWindow: () => isMasterWindow,
-	isMiddleWindow: () => isMiddleWindow,
-	isStackWindow: () => isStackWindow,
-	isTopWindow: () => isTopWindow,
-	isValidLayout: () => isValidLayout,
-	isWindowTouchingLeftEdge: () => isWindowTouchingLeftEdge,
-	moveWindowToMaster: () => moveWindowToMaster$1,
-	moveWindowToStack: () => moveWindowToStack,
-	refreshWindowsData: () => refreshWindowsData,
-	updateWindows: () => updateWindows,
-	validateState: () => validateState
-});
-var WindowManagerClass = class {
-	display;
-	space;
-	expectedCurrentNumMasterWindows;
-	windowsData = [];
-	constructor({ display, expectedCurrentNumMasterWindows, space }) {
-		this.display = display;
-		this.space = space;
-		this.expectedCurrentNumMasterWindows = expectedCurrentNumMasterWindows;
-		Object.assign(this, methods_exports);
-	}
-};
-const WindowsManager = WindowManagerClass;
-async function createInitializedWindowsManager() {
-	const state = await readState();
-	const display = await getFocusedDisplay();
-	const space = await getFocusedSpace();
-	const spaceState = state[space.id];
-	invariant(spaceState);
-	const wm = new WindowsManager({
-		display,
-		space,
-		expectedCurrentNumMasterWindows: spaceState.numMasterWindows
-	});
-	await wm.initialize();
-	wm.validateState(state);
-	return {
-		wm,
-		state,
-		display,
-		space
-	};
-}
-const closeFocusedWindow = defineTask(async () => {
-	const { wm } = await createInitializedWindowsManager();
-	const windowToClose = wm.getFocusedWindow();
-	if (windowToClose === void 0) return;
-	const masterWindows = wm.getMasterWindows().sort((w1, w2) => w1.frame.y - w2.frame.y);
-	const stackWindows = wm.getStackWindows().sort((w1, w2) => w1.frame.y - w2.frame.y);
-	let windowToFocus;
-	if (wm.isStackWindow(windowToClose)) {
-		if (stackWindows.length === 1) windowToFocus = masterWindows[0];
-		else {
-			const windowPosition = stackWindows.findIndex((w) => w.id === windowToClose.id);
-			if (windowPosition === 0) windowToFocus = stackWindows[1];
-			else windowToFocus = stackWindows[windowPosition - 1];
-		}
-	} else if (wm.isMasterWindow(windowToClose)) {
-		if (masterWindows.length === 1 && stackWindows.length > 0) windowToFocus = stackWindows[stackWindows.length - 1];
-		else {
-			const windowPosition = masterWindows.findIndex((w) => w.id === windowToClose.id);
-			if (windowPosition === 0) windowToFocus = masterWindows[1];
-			else windowToFocus = masterWindows[windowPosition - 1];
-		}
-	}
-	await wm.executeYabaiCommand(`-m window --close`);
-	if (windowToFocus !== void 0) await wm.executeYabaiCommand(`-m window --focus ${windowToFocus.id}`);
-});
-const decreaseMasterWindowCount = defineTask(async () => {
-	const { wm, state, space } = await createInitializedWindowsManager();
-	const spaceState = state[space.id];
-	invariant(spaceState);
-	if (spaceState.numMasterWindows > 1) {
-		spaceState.numMasterWindows -= 1;
-		writeState(state);
-		debug(() => "Decreasing master window count.");
-		await wm.updateWindows({ targetNumMasterWindows: spaceState.numMasterWindows });
-	}
-});
-const focusDownWindow = defineTask(async () => {
-	const { wm } = await createInitializedWindowsManager();
-	const focusedWindow = wm.getFocusedWindow();
-	if (focusedWindow !== void 0) {
-		if (wm.isMasterWindow(focusedWindow) && wm.isBottomWindow(wm.getMasterWindows(), focusedWindow)) {
-			const windowToFocus = wm.getTopStackWindow() ?? wm.getTopMasterWindow();
-			if (windowToFocus === void 0) debug(() => `Now window to focus on`);
-			else {
-				debug(() => `Focusing on the window ${windowToFocus.app}`);
-				await wm.executeYabaiCommand(`-m window --focus ${windowToFocus.id}`);
-			}
-		} else if (wm.isStackWindow(focusedWindow) && wm.isBottomWindow(wm.getStackWindows(), focusedWindow)) {
-			const windowToFocus = wm.getTopMasterWindow();
-			if (windowToFocus === void 0) debug(() => `No window to focus on`);
-			else {
-				debug(() => `Focusing on the window ${windowToFocus.app}`);
-				await wm.executeYabaiCommand(`-m window --focus ${windowToFocus.id}`);
-			}
-		} else await wm.executeYabaiCommand(`-m window --focus south`);
-	} else await wm.executeYabaiCommand(`-m window --focus first`);
-});
-const focusMasterWindow = defineTask(async () => {
-	const config = getConfig();
-	switch (config.masterPosition) {
-		case "right":
-			await Bun.spawn([
-				config.yabaiPath,
-				"-m",
-				"window",
-				"--focus",
-				"east"
-			]).exited;
-			break;
-		case "left":
-			await Bun.spawn([
-				config.yabaiPath,
-				"-m",
-				"window",
-				"--focus",
-				"west"
-			]).exited;
-			break;
-		default: throw new Error(`Unsupported master position: ${String(config.masterPosition)}`);
-	}
-});
-const focusNextDisplay = defineTask(async () => {
-	const displays = await getDisplays();
-	const focusedDisplay = await getFocusedDisplay();
-	const sortedDisplays = displays.sort((d1, d2) => d1.frame.x - d2.frame.x);
-	console.log(sortedDisplays);
-	const nextFocusedDisplay = sortedDisplays[(sortedDisplays.findIndex((display) => display.id === focusedDisplay.id) + 1) % sortedDisplays.length];
-	const { yabaiPath } = getConfig();
-	await Bun.spawn([
-		yabaiPath,
-		"-m",
-		"display",
-		"--focus",
-		nextFocusedDisplay.index.toString()
-	]).exited;
-});
-const focusPreviousDisplay = defineTask(async () => {
-	const displays = await getDisplays();
-	const focusedDisplay = await getFocusedDisplay();
-	const sortedDisplays = displays.sort((d1, d2) => d1.frame.x - d2.frame.x);
-	const previousFocusedDisplay = sortedDisplays[(sortedDisplays.findIndex((display) => display.id === focusedDisplay.id) - 1 + sortedDisplays.length) % sortedDisplays.length];
-	const { yabaiPath } = getConfig();
-	await Bun.spawn([
-		yabaiPath,
-		"-m",
-		"display",
-		"--focus",
-		previousFocusedDisplay.index.toString()
-	]).exited;
-});
-const moveWindowToNextDisplay = defineTask(async () => {
-	const displays = await getDisplays();
-	const focusedDisplay = await getFocusedDisplay();
-	const sortedDisplays = displays.sort((d1, d2) => d1.frame.x - d2.frame.x);
-	console.log(sortedDisplays);
-	const nextFocusedDisplay = sortedDisplays[(sortedDisplays.findIndex((display) => display.id === focusedDisplay.id) + 1) % sortedDisplays.length];
-	const { yabaiPath } = getConfig();
-	await Bun.spawn([
-		yabaiPath,
-		"-m",
-		"window",
-		"--display",
-		nextFocusedDisplay.index.toString()
-	]).exited;
-});
-const moveWindowToPreviousDisplay = defineTask(async () => {
-	const displays = await getDisplays();
-	const focusedDisplay = await getFocusedDisplay();
-	const sortedDisplays = displays.sort((d1, d2) => d1.frame.x - d2.frame.x);
-	const previousFocusedDisplay = sortedDisplays[(sortedDisplays.findIndex((display) => display.id === focusedDisplay.id) - 1 + sortedDisplays.length) % sortedDisplays.length];
-	const { yabaiPath } = getConfig();
-	await Bun.spawn([
-		yabaiPath,
-		"-m",
-		"window",
-		"--display",
-		previousFocusedDisplay.index.toString()
-	]).exited;
-});
-const moveWindowToMaster = defineTask(async () => {
-	const config = getConfig();
-	switch (config.masterPosition) {
-		case "right":
-			await Bun.spawn([
-				config.yabaiPath,
-				"-m",
-				"window",
-				"--swap",
-				"east"
-			]).exited;
-			break;
-		case "left":
-			await Bun.spawn([
-				config.yabaiPath,
-				"-m",
-				"window",
-				"--swap",
-				"west"
-			]).exited;
-			break;
-		default: throw new Error(`Unsupported master position: ${String(config.masterPosition)}`);
-	}
-});
-const tasksMap = {
-	"close-focused-window": closeFocusedWindow,
-	"decrease-master-window-count": decreaseMasterWindowCount,
-	"focus-down-window": focusDownWindow,
-	"focus-up-window": defineTask(async () => {
-		const { wm } = await createInitializedWindowsManager();
-		const focusedWindow = wm.getFocusedWindow();
-		if (focusedWindow !== void 0) {
-			if (wm.isMasterWindow(focusedWindow) && wm.isTopWindow(wm.getMasterWindows(), focusedWindow)) {
-				const windowToFocus = wm.getBottomStackWindow() ?? wm.getBottomMasterWindow();
-				if (windowToFocus === void 0) debug(() => `No window to focus on`);
-				else {
-					debug(() => `Focusing on the window ${windowToFocus.app}`);
-					await wm.executeYabaiCommand(`-m window --focus ${windowToFocus.id}`);
-				}
-			} else if (wm.isStackWindow(focusedWindow) && wm.isTopWindow(wm.getStackWindows(), focusedWindow)) {
-				const windowToFocus = wm.getBottomMasterWindow();
-				if (windowToFocus === void 0) debug(() => `No window to focus on`);
-				else {
-					debug(() => `Focusing on the window ${windowToFocus.app}`);
-					await wm.executeYabaiCommand(`-m window --focus ${windowToFocus.id}`);
-				}
-			} else await wm.executeYabaiCommand(`-m window --focus north`);
-		}
-	}),
-	"increase-master-window-count": defineTask(async () => {
-		const { wm, space, state } = await createInitializedWindowsManager();
-		const spaceState = state[space.id];
-		invariant(spaceState);
-		if (spaceState.numMasterWindows < wm.windowsData.length) {
-			spaceState.numMasterWindows += 1;
-			writeState(state);
-			debug(() => "Increasing master window count.");
-			await wm.updateWindows({ targetNumMasterWindows: spaceState.numMasterWindows });
-		}
-	}),
-	"on-yabai-start": defineTask(async () => {
-		const { wm, state, space } = await createInitializedWindowsManager();
-		const spaceState = state[space.id];
-		invariant(spaceState);
-		await wm.updateWindows({ targetNumMasterWindows: spaceState.numMasterWindows });
-	}),
-	"window-created": defineTask(async () => {
-		const { wm, state, space } = await createInitializedWindowsManager();
-		debug(() => "Starting to handle window_created.");
-		if ((await wm.isValidLayout()).status) {
-			debug(() => "Valid layout detected; no changes were made.");
-			return;
-		}
-		const processId = process$1.env.YABAI_PROCESS_ID;
-		const windowId = process$1.env.YABAI_WINDOW_ID;
-		const curNumMasterWindows = wm.getMasterWindows().length;
-		const window = wm.getWindowData({
-			windowId,
-			processId
-		});
-		const spaceState = state[space.id];
-		invariant(spaceState);
-		if (getConfig().moveNewWindowsToMaster) {
-			if (curNumMasterWindows >= spaceState.numMasterWindows) {
-				const oldMasterWindow = wm.getMasterWindows()[0];
-				invariant(oldMasterWindow);
-				await wm.moveWindowToMaster(window);
-				await wm.moveWindowToStack(oldMasterWindow);
-			} else await wm.moveWindowToMaster(window);
-		} else if (curNumMasterWindows > 1 && curNumMasterWindows <= spaceState.numMasterWindows) {
-			debug(() => "Moving newly created window to master.");
-			await wm.moveWindowToMaster(window);
-		} else {
-			debug(() => "Moving newly created window to stack.");
-			await wm.moveWindowToStack(window);
-		}
-		await wm.updateWindows({ targetNumMasterWindows: spaceState.numMasterWindows });
-		debug(() => "Finished handling window_created.");
-	}),
-	"window-moved": defineTask(async () => {
-		const { wm, space, state } = await createInitializedWindowsManager();
-		debug(() => "Starting to handle window_moved.");
-		const spaceState = state[space.id];
-		invariant(spaceState);
-		await wm.updateWindows({ targetNumMasterWindows: spaceState.numMasterWindows });
-		debug(() => "Finished handling window_moved.");
-	}),
-	"focus-next-display": focusNextDisplay,
-	"focus-previous-display": focusPreviousDisplay,
-	"move-window-to-next-display": moveWindowToNextDisplay,
-	"move-window-to-previous-display": moveWindowToPreviousDisplay,
-	"move-window-to-master": moveWindowToMaster,
-	"focus-master-window": focusMasterWindow
-};
-//#endregion
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import fs from "node:fs";
+import { execFile, execFileSync, spawn } from "node:child_process";
+import { promisify } from "node:util";
 //#region node_modules/@voxpelli/typed-utils/lib/is.js
 /**
 * @param {unknown} value
@@ -1379,12 +30,2590 @@ function hasOwn(collection, key) {
 	return isPropertyKey(key) ? Object.hasOwn(collection, key) : false;
 }
 //#endregion
+//#region src/lib/bun-executable.ts
+/** Embedded Bun's process.execPath is the host app, not a script runner. */
+function resolveBunExecutable(explicit) {
+	if (explicit && !path.isAbsolute(explicit)) throw new Error("bunPath must be absolute");
+	const candidates = explicit ? [explicit] : [
+		.../^(bun|bun-debug)$/.test(path.basename(process.execPath)) ? [process.execPath] : [],
+		...(process.env.PATH ?? "").split(path.delimiter).filter(Boolean).map((dir) => path.resolve(dir, "bun")),
+		path.join(os.homedir(), ".bun/bin/bun"),
+		path.join(os.homedir(), ".proto/shims/bun"),
+		"/opt/homebrew/bin/bun",
+		"/usr/local/bin/bun"
+	];
+	for (const candidate of new Set(candidates)) {
+		if (!fs.existsSync(candidate)) continue;
+		try {
+			const actual = execFileSync(candidate, ["-e", "if (!process.versions.bun) process.exit(1); process.stdout.write(process.execPath)"], {
+				encoding: "utf8",
+				timeout: 5e3,
+				stdio: [
+					"ignore",
+					"pipe",
+					"pipe"
+				]
+			}).trim();
+			if (path.isAbsolute(actual) && fs.existsSync(actual)) return actual;
+		} catch {}
+	}
+	throw new Error("Cannot find a standalone Bun executable; set aerospaceSetup.bunPath or yabaiSetup.bunPath");
+}
+//#endregion
+//#region node_modules/eslint-visitor-keys/lib/visitor-keys.js
+/**
+* @typedef {{ readonly [type: string]: ReadonlyArray<string> }} VisitorKeys
+*/
+/**
+* @type {VisitorKeys}
+*/
+const KEYS$1 = {
+	ArrayExpression: ["elements"],
+	ArrayPattern: ["elements"],
+	ArrowFunctionExpression: ["params", "body"],
+	AssignmentExpression: ["left", "right"],
+	AssignmentPattern: ["left", "right"],
+	AwaitExpression: ["argument"],
+	BinaryExpression: ["left", "right"],
+	BlockStatement: ["body"],
+	BreakStatement: ["label"],
+	CallExpression: ["callee", "arguments"],
+	CatchClause: ["param", "body"],
+	ChainExpression: ["expression"],
+	ClassBody: ["body"],
+	ClassDeclaration: [
+		"id",
+		"superClass",
+		"body"
+	],
+	ClassExpression: [
+		"id",
+		"superClass",
+		"body"
+	],
+	ConditionalExpression: [
+		"test",
+		"consequent",
+		"alternate"
+	],
+	ContinueStatement: ["label"],
+	DebuggerStatement: [],
+	DoWhileStatement: ["body", "test"],
+	EmptyStatement: [],
+	ExperimentalRestProperty: ["argument"],
+	ExperimentalSpreadProperty: ["argument"],
+	ExportAllDeclaration: [
+		"exported",
+		"source",
+		"attributes"
+	],
+	ExportDefaultDeclaration: ["declaration"],
+	ExportNamedDeclaration: [
+		"declaration",
+		"specifiers",
+		"source",
+		"attributes"
+	],
+	ExportSpecifier: ["local", "exported"],
+	ExpressionStatement: ["expression"],
+	ForInStatement: [
+		"left",
+		"right",
+		"body"
+	],
+	ForOfStatement: [
+		"left",
+		"right",
+		"body"
+	],
+	ForStatement: [
+		"init",
+		"test",
+		"update",
+		"body"
+	],
+	FunctionDeclaration: [
+		"id",
+		"params",
+		"body"
+	],
+	FunctionExpression: [
+		"id",
+		"params",
+		"body"
+	],
+	Identifier: [],
+	IfStatement: [
+		"test",
+		"consequent",
+		"alternate"
+	],
+	ImportAttribute: ["key", "value"],
+	ImportDeclaration: [
+		"specifiers",
+		"source",
+		"attributes"
+	],
+	ImportDefaultSpecifier: ["local"],
+	ImportExpression: ["source", "options"],
+	ImportNamespaceSpecifier: ["local"],
+	ImportSpecifier: ["imported", "local"],
+	JSXAttribute: ["name", "value"],
+	JSXClosingElement: ["name"],
+	JSXClosingFragment: [],
+	JSXElement: [
+		"openingElement",
+		"children",
+		"closingElement"
+	],
+	JSXEmptyExpression: [],
+	JSXExpressionContainer: ["expression"],
+	JSXFragment: [
+		"openingFragment",
+		"children",
+		"closingFragment"
+	],
+	JSXIdentifier: [],
+	JSXMemberExpression: ["object", "property"],
+	JSXNamespacedName: ["namespace", "name"],
+	JSXOpeningElement: ["name", "attributes"],
+	JSXOpeningFragment: [],
+	JSXSpreadAttribute: ["argument"],
+	JSXSpreadChild: ["expression"],
+	JSXText: [],
+	LabeledStatement: ["label", "body"],
+	Literal: [],
+	LogicalExpression: ["left", "right"],
+	MemberExpression: ["object", "property"],
+	MetaProperty: ["meta", "property"],
+	MethodDefinition: ["key", "value"],
+	NewExpression: ["callee", "arguments"],
+	ObjectExpression: ["properties"],
+	ObjectPattern: ["properties"],
+	PrivateIdentifier: [],
+	Program: ["body"],
+	Property: ["key", "value"],
+	PropertyDefinition: ["key", "value"],
+	RestElement: ["argument"],
+	ReturnStatement: ["argument"],
+	SequenceExpression: ["expressions"],
+	SpreadElement: ["argument"],
+	StaticBlock: ["body"],
+	Super: [],
+	SwitchCase: ["test", "consequent"],
+	SwitchStatement: ["discriminant", "cases"],
+	TaggedTemplateExpression: ["tag", "quasi"],
+	TemplateElement: [],
+	TemplateLiteral: ["quasis", "expressions"],
+	ThisExpression: [],
+	ThrowStatement: ["argument"],
+	TryStatement: [
+		"block",
+		"handler",
+		"finalizer"
+	],
+	UnaryExpression: ["argument"],
+	UpdateExpression: ["argument"],
+	VariableDeclaration: ["declarations"],
+	VariableDeclarator: ["id", "init"],
+	WhileStatement: ["test", "body"],
+	WithStatement: ["object", "body"],
+	YieldExpression: ["argument"]
+};
+const NODE_TYPES = Object.keys(KEYS$1);
+for (const type of NODE_TYPES) Object.freeze(KEYS$1[type]);
+Object.freeze(KEYS$1);
+//#endregion
+//#region node_modules/eslint-visitor-keys/lib/index.js
+/**
+* @author Toru Nagashima <https://github.com/mysticatea>
+* See LICENSE file in root directory for full license.
+*/
+/**
+* Make the union set with `KEYS` and given keys.
+* @param {VisitorKeys} additionalKeys The additional keys.
+* @returns {VisitorKeys} The union set.
+*/
+function unionWith(additionalKeys) {
+	const retv = Object.assign({}, KEYS$1);
+	for (const type of Object.keys(additionalKeys)) if (Object.hasOwn(retv, type)) {
+		const keys = new Set(additionalKeys[type]);
+		for (const key of retv[type]) keys.add(key);
+		retv[type] = Object.freeze(Array.from(keys));
+	} else retv[type] = Object.freeze(Array.from(additionalKeys[type]));
+	return Object.freeze(retv);
+}
+//#endregion
+//#region node_modules/toml-eslint-parser/lib/index.mjs
+/**
+* Get the last element from given array
+*/
+function last(arr) {
+	return arr[arr.length - 1] ?? null;
+}
+/**
+* Node to key name
+*/
+function toKeyName(node) {
+	return node.type === "TOMLBare" ? node.name : node.value;
+}
+var TOMLVerImpl = class {
+	constructor(major, minor) {
+		this.major = major;
+		this.minor = minor;
+	}
+	lt(major, minor) {
+		return this.major < major || this.major === major && this.minor < minor;
+	}
+	gte(major, minor) {
+		return this.major > major || this.major === major && this.minor >= minor;
+	}
+};
+const TOML_VERSION_1_0 = new TOMLVerImpl(1, 0);
+const TOML_VERSION_1_1 = new TOMLVerImpl(1, 1);
+const DEFAULT_TOML_VERSION = TOML_VERSION_1_1;
+const SUPPORTED_TOML_VERSIONS = {
+	"1.0": TOML_VERSION_1_0,
+	"1.0.0": TOML_VERSION_1_0,
+	"1.1": TOML_VERSION_1_1,
+	"1.1.0": TOML_VERSION_1_1,
+	latest: TOML_VERSION_1_1,
+	next: TOML_VERSION_1_1
+};
+/**
+* Get TOML version object from given TOML version string.
+*/
+function getTOMLVer(v) {
+	return v && SUPPORTED_TOML_VERSIONS[v] || DEFAULT_TOML_VERSION;
+}
+const MESSAGES = {
+	"unterminated-string": "Unterminated string constant",
+	"unterminated-table-key": "Unterminated table-key",
+	"unterminated-array": "Unterminated array",
+	"unterminated-inline-table": "Unterminated inline table",
+	"missing-key": "Empty bare keys are not allowed",
+	"missing-newline": "Must be a newline",
+	"missing-equals-sign": "Expected equal (=) token",
+	"missing-value": "Unspecified values are invalid",
+	"missing-comma": "Expected comma (,) token",
+	"dupe-keys": "Defining a key multiple times is invalid",
+	"unexpected-char": "Unexpected character",
+	"unexpected-token": "Unexpected token",
+	"invalid-control-character": "Control characters (codes < 0x1f and 0x7f) are not allowed",
+	"invalid-comment-character": "Invalid code point {{cp}} within comments",
+	"invalid-key-value-newline": "The key, equals sign, and value must be on the same line",
+	"invalid-inline-table-newline": "No newlines are allowed between the curly braces unless they are valid within a value",
+	"invalid-underscore": "Underscores are allowed between digits",
+	"invalid-space": "Unexpected spaces",
+	"invalid-three-quotes": "Three or more quotes are not permitted",
+	"invalid-date": "Unexpected invalid date",
+	"invalid-time": "Unexpected invalid time",
+	"invalid-leading-zero": "Leading zeros are not allowed",
+	"invalid-trailing-comma-in-inline-table": "Trailing comma is not permitted in an inline table",
+	"invalid-char-in-escape-sequence": "Invalid character in escape sequence",
+	"invalid-consecutive-dots-in-key": "Consecutive dots are not permitted in keys",
+	"invalid-code-point": "Invalid code point {{cp}}",
+	"invalid-trailing-dot-in-key": "Keys cannot end with a dot",
+	"invalid-leading-dot-in-key": "Keys cannot start with a dot"
+};
+/**
+* Get message from error code
+*/
+function getMessage(code, data) {
+	if (data) return MESSAGES[code].replace(/\{\{(.*?)\}\}/gu, (_, name$2) => {
+		if (name$2 in data) return data[name$2];
+		return `{{${name$2}}}`;
+	});
+	return MESSAGES[code];
+}
+/**
+* TOML parse errors.
+*/
+var ParseError = class extends SyntaxError {
+	/**
+	* Initialize this ParseError instance.
+	*
+	*/
+	constructor(code, offset, line, column, data) {
+		super(getMessage(code, data));
+		this.index = offset;
+		this.lineNumber = line;
+		this.column = column;
+	}
+};
+const CodePoint = {
+	EOF: -1,
+	NULL: 0,
+	SOH: 1,
+	BACKSPACE: 8,
+	TABULATION: 9,
+	LINE_FEED: 10,
+	FORM_FEED: 12,
+	CARRIAGE_RETURN: 13,
+	ESCAPE: 27,
+	SO: 14,
+	US: 31,
+	SPACE: 32,
+	QUOTATION_MARK: 34,
+	HASH: 35,
+	SINGLE_QUOTE: 39,
+	PLUS_SIGN: 43,
+	COMMA: 44,
+	DASH: 45,
+	DOT: 46,
+	DIGIT_0: 48,
+	DIGIT_1: 49,
+	DIGIT_2: 50,
+	DIGIT_3: 51,
+	DIGIT_7: 55,
+	DIGIT_9: 57,
+	COLON: 58,
+	EQUALS_SIGN: 61,
+	LATIN_CAPITAL_A: 65,
+	LATIN_CAPITAL_E: 69,
+	LATIN_CAPITAL_F: 70,
+	LATIN_CAPITAL_T: 84,
+	LATIN_CAPITAL_U: 85,
+	LATIN_CAPITAL_Z: 90,
+	LEFT_BRACKET: 91,
+	BACKSLASH: 92,
+	RIGHT_BRACKET: 93,
+	UNDERSCORE: 95,
+	LATIN_SMALL_A: 97,
+	LATIN_SMALL_B: 98,
+	LATIN_SMALL_E: 101,
+	LATIN_SMALL_F: 102,
+	LATIN_SMALL_I: 105,
+	LATIN_SMALL_L: 108,
+	LATIN_SMALL_N: 110,
+	LATIN_SMALL_O: 111,
+	LATIN_SMALL_R: 114,
+	LATIN_SMALL_S: 115,
+	LATIN_SMALL_T: 116,
+	LATIN_SMALL_U: 117,
+	LATIN_SMALL_X: 120,
+	LATIN_SMALL_Z: 122,
+	LEFT_BRACE: 123,
+	RIGHT_BRACE: 125,
+	TILDE: 126,
+	DELETE: 127,
+	PAD: 128,
+	SUPERSCRIPT_TWO: 178,
+	SUPERSCRIPT_THREE: 179,
+	SUPERSCRIPT_ONE: 185,
+	VULGAR_FRACTION_ONE_QUARTER: 188,
+	VULGAR_FRACTION_THREE_QUARTERS: 190,
+	LATIN_CAPITAL_LETTER_A_WITH_GRAVE: 192,
+	LATIN_CAPITAL_LETTER_O_WITH_DIAERESIS: 214,
+	LATIN_CAPITAL_LETTER_O_WITH_STROKE: 216,
+	LATIN_SMALL_LETTER_O_WITH_DIAERESIS: 246,
+	LATIN_SMALL_LETTER_O_WITH_STROKE: 248,
+	GREEK_SMALL_REVERSED_DOTTED_LUNATE_SIGMA_SYMBOL: 891,
+	GREEK_CAPITAL_LETTER_YOT: 895,
+	CP_1FFF: 8191,
+	ZERO_WIDTH_NON_JOINER: 8204,
+	ZERO_WIDTH_JOINER: 8205,
+	UNDERTIE: 8255,
+	CHARACTER_TIE: 8256,
+	SUPERSCRIPT_ZERO: 8304,
+	CP_218F: 8591,
+	CIRCLED_DIGIT_ONE: 9312,
+	NEGATIVE_CIRCLED_DIGIT_ZERO: 9471,
+	GLAGOLITIC_CAPITAL_LETTER_AZU: 11264,
+	CP_2FEF: 12271,
+	IDEOGRAPHIC_COMMA: 12289,
+	CP_D7FF: 55295,
+	CP_E000: 57344,
+	CJK_COMPATIBILITY_IDEOGRAPH_F900: 63744,
+	ARABIC_LIGATURE_SALAAMUHU_ALAYNAA: 64975,
+	ARABIC_LIGATURE_SALLA_USED_AS_KORANIC_STOP_SIGN_ISOLATED_FORM: 65008,
+	REPLACEMENT_CHARACTER: 65533,
+	LINEAR_B_SYLLABLE_B008_A: 65536,
+	CP_EFFFF: 983039,
+	CP_10FFFF: 1114111
+};
+/**
+* Check whether the code point is a control character.
+*/
+function isControl(cp) {
+	return cp >= CodePoint.NULL && cp <= CodePoint.US;
+}
+/**
+* Check whether the code point is a whitespace.
+*/
+function isWhitespace(cp) {
+	return cp === CodePoint.TABULATION || cp === CodePoint.SPACE;
+}
+/**
+* Check whether the code point is a end of line.
+*/
+function isEOL(cp) {
+	return cp === CodePoint.LINE_FEED || cp === CodePoint.CARRIAGE_RETURN;
+}
+/**
+* Check whether the code point is an uppercase letter character.
+*/
+function isUpperLetter(cp) {
+	return cp >= CodePoint.LATIN_CAPITAL_A && cp <= CodePoint.LATIN_CAPITAL_Z;
+}
+/**
+* Check whether the code point is a lowercase letter character.
+*/
+function isLowerLetter(cp) {
+	return cp >= CodePoint.LATIN_SMALL_A && cp <= CodePoint.LATIN_SMALL_Z;
+}
+/**
+* Check whether the code point is a letter character.
+*/
+function isLetter(cp) {
+	return isLowerLetter(cp) || isUpperLetter(cp);
+}
+/**
+* Check whether the code point is a digit character.
+*/
+function isDigit(cp) {
+	return cp >= CodePoint.DIGIT_0 && cp <= CodePoint.DIGIT_9;
+}
+/**
+* Check whether the code point is a hex digit character.
+*/
+function isHexDig(cp) {
+	return isDigit(cp) || cp >= CodePoint.LATIN_SMALL_A && cp <= CodePoint.LATIN_SMALL_F || cp >= CodePoint.LATIN_CAPITAL_A && cp <= CodePoint.LATIN_CAPITAL_F;
+}
+/**
+* Check whether the code point is a octal digit character.
+*/
+function isOctalDig(cp) {
+	return cp >= CodePoint.DIGIT_0 && cp <= CodePoint.DIGIT_7;
+}
+/**
+* Check whether the code point is valid code point.
+*
+* see
+* - https://unicode.org/glossary/#unicode_scalar_value
+* - https://toml.io/en/v1.0.0#string
+*/
+function isUnicodeScalarValue(cp) {
+	return cp >= 0 && cp <= 55295 || cp >= 57344 && cp <= 1114111;
+}
+/**
+* Find the last index of the array that is less than or equal to the value.
+*/
+function sortedLastIndex(array, value) {
+	let low = 0;
+	let high = array.length;
+	while (low < high) {
+		const mid = low + high >>> 1;
+		const val = array[mid];
+		if (val === value) return mid + 1;
+		if (val < value) low = mid + 1;
+		else high = mid;
+	}
+	return low;
+}
+/**
+* A class for getting lines and columns location.
+*/
+var Locations = class {
+	constructor() {
+		this.offsets = [];
+	}
+	addOffset(offset) {
+		for (let i = this.offsets.length - 1; i >= 0; i--) {
+			const element = this.offsets[i];
+			if (element === offset) return;
+			if (element < offset) break;
+		}
+		this.offsets.push(offset);
+	}
+	/**
+	* Calculate the location of the given index.
+	* @param index The index to calculate their location.
+	* @returns The location of the index.
+	*/
+	getLocFromIndex(offset) {
+		const line = sortedLastIndex(this.offsets, offset) + 1;
+		return {
+			line,
+			column: offset - (line === 1 ? 0 : this.offsets[line - 2])
+		};
+	}
+};
+var CodePointIterator = class {
+	/**
+	* Initialize this char iterator.
+	*/
+	constructor(text) {
+		this.locs = new Locations();
+		this.lastCodePoint = CodePoint.NULL;
+		this.start = -1;
+		this.end = 0;
+		this.text = text;
+	}
+	next() {
+		if (this.lastCodePoint === CodePoint.EOF) return CodePoint.EOF;
+		return this.lastCodePoint = this.moveAt(this.end);
+	}
+	getLocFromIndex(index) {
+		return this.locs.getLocFromIndex(index);
+	}
+	eat(cp) {
+		if (this.text.codePointAt(this.end) === cp) {
+			this.next();
+			return true;
+		}
+		return false;
+	}
+	moveAt(offset) {
+		this.start = this.end = offset;
+		const cp = this.text.codePointAt(this.start) ?? CodePoint.EOF;
+		if (cp === CodePoint.EOF) {
+			this.end = this.start;
+			return cp;
+		}
+		this.end += cp >= 65536 ? 2 : 1;
+		if (cp === CodePoint.LINE_FEED) this.locs.addOffset(this.end);
+		else if (cp === CodePoint.CARRIAGE_RETURN) {
+			if (this.text.codePointAt(this.end) === CodePoint.LINE_FEED) {
+				this.end++;
+				this.locs.addOffset(this.end);
+			}
+			return CodePoint.LINE_FEED;
+		}
+		return cp;
+	}
+};
+const HAS_BIGINT = typeof BigInt !== "undefined";
+const RADIX_PREFIXES = {
+	16: "0x",
+	10: "",
+	8: "0o",
+	2: "0b"
+};
+const ESCAPES_1_0 = {
+	[CodePoint.QUOTATION_MARK]: CodePoint.QUOTATION_MARK,
+	[CodePoint.BACKSLASH]: CodePoint.BACKSLASH,
+	[CodePoint.LATIN_SMALL_B]: CodePoint.BACKSPACE,
+	[CodePoint.LATIN_SMALL_F]: CodePoint.FORM_FEED,
+	[CodePoint.LATIN_SMALL_N]: CodePoint.LINE_FEED,
+	[CodePoint.LATIN_SMALL_R]: CodePoint.CARRIAGE_RETURN,
+	[CodePoint.LATIN_SMALL_T]: CodePoint.TABULATION
+};
+const ESCAPES_LATEST = {
+	...ESCAPES_1_0,
+	[CodePoint.LATIN_SMALL_E]: CodePoint.ESCAPE
+};
+/**
+* Tokenizer for TOML.
+*/
+var Tokenizer = class {
+	/**
+	* Initialize this tokenizer.
+	*/
+	constructor(text, parserOptions) {
+		this.backCode = false;
+		this.lastCodePoint = CodePoint.NULL;
+		this.state = "DATA";
+		this.token = null;
+		this.tokenStart = -1;
+		this.valuesEnabled = false;
+		this.text = text;
+		this.parserOptions = parserOptions || {};
+		this.codePointIterator = new CodePointIterator(text);
+		this.tomlVersion = getTOMLVer(this.parserOptions.tomlVersion);
+		this.ESCAPES = this.tomlVersion.gte(1, 1) ? ESCAPES_LATEST : ESCAPES_1_0;
+	}
+	get start() {
+		return this.codePointIterator.start;
+	}
+	get end() {
+		return this.codePointIterator.end;
+	}
+	getLocFromIndex(index) {
+		return this.codePointIterator.getLocFromIndex(index);
+	}
+	/**
+	* Report an invalid character error.
+	*/
+	reportParseError(code, data) {
+		const offset = this.codePointIterator.start;
+		const loc = this.codePointIterator.getLocFromIndex(offset);
+		throw new ParseError(code, offset, loc.line, loc.column, data);
+	}
+	/**
+	* Get the next token.
+	*/
+	nextToken() {
+		let token = this.token;
+		if (token != null) {
+			this.token = null;
+			return token;
+		}
+		let cp = this.lastCodePoint;
+		while (cp !== CodePoint.EOF && !this.token) {
+			cp = this.nextCode();
+			const nextState = this[this.state](cp);
+			if (!nextState) throw new Error(`Unknown error: pre state=${this.state}`);
+			this.state = nextState;
+		}
+		token = this.token;
+		this.token = null;
+		return token;
+	}
+	/**
+	* Get the next code point.
+	*/
+	nextCode() {
+		if (this.lastCodePoint === CodePoint.EOF) return CodePoint.EOF;
+		if (this.backCode) {
+			this.backCode = false;
+			return this.lastCodePoint;
+		}
+		return this.lastCodePoint = this.codePointIterator.next();
+	}
+	/**
+	* Eat the next code point.
+	*/
+	eatCode(cp) {
+		if (this.lastCodePoint === CodePoint.EOF) return false;
+		if (this.backCode) {
+			if (this.lastCodePoint === cp) {
+				this.backCode = false;
+				return true;
+			}
+			return false;
+		}
+		return this.codePointIterator.eat(cp);
+	}
+	/**
+	* Moves the character position to the given position.
+	*/
+	moveAt(loc) {
+		if (this.backCode) this.backCode = false;
+		this.lastCodePoint = this.codePointIterator.moveAt(loc);
+	}
+	/**
+	* Back the current code point as the given state.
+	*/
+	back(state) {
+		this.backCode = true;
+		return state;
+	}
+	punctuatorToken() {
+		this.startToken();
+		this.endToken("Punctuator", "end");
+	}
+	startToken() {
+		this.tokenStart = this.codePointIterator.start;
+	}
+	/**
+	* Commit the current token.
+	*/
+	endToken(type, pos, option1, option2) {
+		const { tokenStart } = this;
+		const end = this.codePointIterator[pos];
+		const range = [tokenStart, end];
+		const loc = {
+			start: this.codePointIterator.getLocFromIndex(tokenStart),
+			end: this.codePointIterator.getLocFromIndex(end)
+		};
+		if (type === "Block") this.token = {
+			type,
+			value: this.text.slice(tokenStart + 1, end),
+			range,
+			loc
+		};
+		else {
+			let token;
+			const value = this.text.slice(tokenStart, end);
+			if (type === "BasicString" || type === "LiteralString" || type === "MultiLineBasicString" || type === "MultiLineLiteralString") token = {
+				type,
+				value,
+				string: option1,
+				range,
+				loc
+			};
+			else if (type === "Integer") {
+				const text = option1;
+				token = {
+					type,
+					value,
+					number: parseInt(text, option2),
+					bigint: HAS_BIGINT ? BigInt(RADIX_PREFIXES[option2] + text) : null,
+					range,
+					loc
+				};
+			} else if (type === "Float") token = {
+				type,
+				value,
+				number: option1,
+				range,
+				loc
+			};
+			else if (type === "Boolean") token = {
+				type,
+				value,
+				boolean: option1,
+				range,
+				loc
+			};
+			else if (type === "LocalDate" || type === "LocalTime" || type === "LocalDateTime" || type === "OffsetDateTime") token = {
+				type,
+				value,
+				date: option1,
+				range,
+				loc
+			};
+			else token = {
+				type,
+				value,
+				range,
+				loc
+			};
+			this.token = token;
+		}
+	}
+	DATA(cp) {
+		while (isWhitespace(cp) || isEOL(cp)) cp = this.nextCode();
+		if (cp === CodePoint.HASH) {
+			this.startToken();
+			return "COMMENT";
+		}
+		if (cp === CodePoint.QUOTATION_MARK) {
+			this.startToken();
+			return "BASIC_STRING";
+		}
+		if (cp === CodePoint.SINGLE_QUOTE) {
+			this.startToken();
+			return "LITERAL_STRING";
+		}
+		if (cp === CodePoint.DOT || cp === CodePoint.EQUALS_SIGN || cp === CodePoint.LEFT_BRACKET || cp === CodePoint.RIGHT_BRACKET || cp === CodePoint.LEFT_BRACE || cp === CodePoint.RIGHT_BRACE || cp === CodePoint.COMMA) {
+			this.punctuatorToken();
+			return "DATA";
+		}
+		if (this.valuesEnabled) {
+			if (cp === CodePoint.DASH || cp === CodePoint.PLUS_SIGN) {
+				this.startToken();
+				return "SIGN";
+			}
+			if (cp === CodePoint.LATIN_SMALL_N || cp === CodePoint.LATIN_SMALL_I) {
+				this.startToken();
+				return this.back("NAN_OR_INF");
+			}
+			if (isDigit(cp)) {
+				this.startToken();
+				return this.back("NUMBER");
+			}
+			if (cp === CodePoint.LATIN_SMALL_T || cp === CodePoint.LATIN_SMALL_F) {
+				this.startToken();
+				return this.back("BOOLEAN");
+			}
+		} else if (isUnquotedKeyChar(cp, this.tomlVersion)) {
+			this.startToken();
+			return "BARE";
+		}
+		if (cp === CodePoint.EOF) return "DATA";
+		return this.reportParseError("unexpected-char");
+	}
+	COMMENT(cp) {
+		const processCommentChar = this.tomlVersion.gte(1, 1) ? (c) => {
+			if (!isNonEOL(c)) this.reportParseError("invalid-comment-character", { cp: JSON.stringify(String.fromCodePoint(c)).slice(1, -1) });
+		} : (c) => {
+			if (isControlOtherThanTab(c)) this.reportParseErrorControlChar();
+		};
+		while (!isEOL(cp) && cp !== CodePoint.EOF) {
+			processCommentChar(cp);
+			cp = this.nextCode();
+		}
+		this.endToken("Block", "start");
+		return "DATA";
+	}
+	BARE(cp) {
+		while (isUnquotedKeyChar(cp, this.tomlVersion)) cp = this.nextCode();
+		this.endToken("Bare", "start");
+		return this.back("DATA");
+	}
+	BASIC_STRING(cp) {
+		if (cp === CodePoint.QUOTATION_MARK) {
+			cp = this.nextCode();
+			if (cp === CodePoint.QUOTATION_MARK) return "MULTI_LINE_BASIC_STRING";
+			this.endToken("BasicString", "start", "");
+			return this.back("DATA");
+		}
+		const out = [];
+		while (cp !== CodePoint.QUOTATION_MARK && cp !== CodePoint.EOF && cp !== CodePoint.LINE_FEED) {
+			if (isControlOtherThanTab(cp)) return this.reportParseErrorControlChar();
+			if (cp === CodePoint.BACKSLASH) {
+				cp = this.nextCode();
+				const ecp = this.ESCAPES[cp];
+				if (ecp) {
+					out.push(ecp);
+					cp = this.nextCode();
+					continue;
+				} else if (cp === CodePoint.LATIN_SMALL_U) {
+					const code = this.parseUnicode(4);
+					out.push(code);
+					cp = this.nextCode();
+					continue;
+				} else if (cp === CodePoint.LATIN_CAPITAL_U) {
+					const code = this.parseUnicode(8);
+					out.push(code);
+					cp = this.nextCode();
+					continue;
+				} else if (cp === CodePoint.LATIN_SMALL_X && this.tomlVersion.gte(1, 1)) {
+					const code = this.parseUnicode(2);
+					out.push(code);
+					cp = this.nextCode();
+					continue;
+				}
+				return this.reportParseError("invalid-char-in-escape-sequence");
+			}
+			out.push(cp);
+			cp = this.nextCode();
+		}
+		if (cp !== CodePoint.QUOTATION_MARK) return this.reportParseError("unterminated-string");
+		this.endToken("BasicString", "end", String.fromCodePoint(...out));
+		return "DATA";
+	}
+	MULTI_LINE_BASIC_STRING(cp) {
+		const out = [];
+		if (cp === CodePoint.LINE_FEED) cp = this.nextCode();
+		while (cp !== CodePoint.EOF) {
+			if (cp !== CodePoint.LINE_FEED && isControlOtherThanTab(cp)) return this.reportParseErrorControlChar();
+			if (cp === CodePoint.QUOTATION_MARK) {
+				const startPos = this.codePointIterator.start;
+				if (this.eatCode(CodePoint.QUOTATION_MARK) && this.eatCode(CodePoint.QUOTATION_MARK)) {
+					if (this.eatCode(CodePoint.QUOTATION_MARK)) {
+						out.push(CodePoint.QUOTATION_MARK);
+						if (this.eatCode(CodePoint.QUOTATION_MARK)) {
+							out.push(CodePoint.QUOTATION_MARK);
+							if (this.eatCode(CodePoint.QUOTATION_MARK)) {
+								this.moveAt(startPos);
+								return this.reportParseError("invalid-three-quotes");
+							}
+						}
+					}
+					this.endToken("MultiLineBasicString", "end", String.fromCodePoint(...out));
+					return "DATA";
+				}
+				this.moveAt(startPos);
+			}
+			if (cp === CodePoint.BACKSLASH) {
+				cp = this.nextCode();
+				const ecp = this.ESCAPES[cp];
+				if (ecp) {
+					out.push(ecp);
+					cp = this.nextCode();
+					continue;
+				} else if (cp === CodePoint.LATIN_SMALL_U) {
+					const code = this.parseUnicode(4);
+					out.push(code);
+					cp = this.nextCode();
+					continue;
+				} else if (cp === CodePoint.LATIN_CAPITAL_U) {
+					const code = this.parseUnicode(8);
+					out.push(code);
+					cp = this.nextCode();
+					continue;
+				} else if (cp === CodePoint.LATIN_SMALL_X && this.tomlVersion.gte(1, 1)) {
+					const code = this.parseUnicode(2);
+					out.push(code);
+					cp = this.nextCode();
+					continue;
+				} else if (cp === CodePoint.LINE_FEED) {
+					cp = this.nextCode();
+					while (isWhitespace(cp) || cp === CodePoint.LINE_FEED) cp = this.nextCode();
+					continue;
+				} else if (isWhitespace(cp)) {
+					let valid = true;
+					const startPos = this.codePointIterator.start;
+					let nextCp;
+					while ((nextCp = this.nextCode()) !== CodePoint.EOF) {
+						if (nextCp === CodePoint.LINE_FEED) break;
+						if (!isWhitespace(nextCp)) {
+							this.moveAt(startPos);
+							valid = false;
+							break;
+						}
+					}
+					if (valid) {
+						cp = this.nextCode();
+						while (isWhitespace(cp) || cp === CodePoint.LINE_FEED) cp = this.nextCode();
+						continue;
+					}
+				}
+				return this.reportParseError("invalid-char-in-escape-sequence");
+			}
+			out.push(cp);
+			cp = this.nextCode();
+		}
+		return this.reportParseError("unterminated-string");
+	}
+	LITERAL_STRING(cp) {
+		if (cp === CodePoint.SINGLE_QUOTE) {
+			cp = this.nextCode();
+			if (cp === CodePoint.SINGLE_QUOTE) return "MULTI_LINE_LITERAL_STRING";
+			this.endToken("LiteralString", "start", "");
+			return this.back("DATA");
+		}
+		const out = [];
+		while (cp !== CodePoint.SINGLE_QUOTE && cp !== CodePoint.EOF && cp !== CodePoint.LINE_FEED) {
+			if (isControlOtherThanTab(cp)) return this.reportParseErrorControlChar();
+			out.push(cp);
+			cp = this.nextCode();
+		}
+		if (cp !== CodePoint.SINGLE_QUOTE) return this.reportParseError("unterminated-string");
+		this.endToken("LiteralString", "end", String.fromCodePoint(...out));
+		return "DATA";
+	}
+	MULTI_LINE_LITERAL_STRING(cp) {
+		const out = [];
+		if (cp === CodePoint.LINE_FEED) cp = this.nextCode();
+		while (cp !== CodePoint.EOF) {
+			if (cp !== CodePoint.LINE_FEED && isControlOtherThanTab(cp)) return this.reportParseErrorControlChar();
+			if (cp === CodePoint.SINGLE_QUOTE) {
+				const startPos = this.codePointIterator.start;
+				if (this.eatCode(CodePoint.SINGLE_QUOTE) && this.eatCode(CodePoint.SINGLE_QUOTE)) {
+					if (this.eatCode(CodePoint.SINGLE_QUOTE)) {
+						out.push(CodePoint.SINGLE_QUOTE);
+						if (this.eatCode(CodePoint.SINGLE_QUOTE)) {
+							out.push(CodePoint.SINGLE_QUOTE);
+							if (this.eatCode(CodePoint.SINGLE_QUOTE)) {
+								this.moveAt(startPos);
+								return this.reportParseError("invalid-three-quotes");
+							}
+						}
+					}
+					this.endToken("MultiLineLiteralString", "end", String.fromCodePoint(...out));
+					return "DATA";
+				}
+				this.moveAt(startPos);
+			}
+			out.push(cp);
+			cp = this.nextCode();
+		}
+		return this.reportParseError("unterminated-string");
+	}
+	SIGN(cp) {
+		if (cp === CodePoint.LATIN_SMALL_N || cp === CodePoint.LATIN_SMALL_I) return this.back("NAN_OR_INF");
+		if (isDigit(cp)) return this.back("NUMBER");
+		return this.reportParseError("unexpected-char");
+	}
+	NAN_OR_INF(cp) {
+		if (cp === CodePoint.LATIN_SMALL_N) {
+			const startPos = this.codePointIterator.start;
+			if (this.eatCode(CodePoint.LATIN_SMALL_A) && this.eatCode(CodePoint.LATIN_SMALL_N)) {
+				this.endToken("Float", "end", NaN);
+				return "DATA";
+			}
+			this.moveAt(startPos);
+		} else if (cp === CodePoint.LATIN_SMALL_I) {
+			const startPos = this.codePointIterator.start;
+			if (this.eatCode(CodePoint.LATIN_SMALL_N) && this.eatCode(CodePoint.LATIN_SMALL_F)) {
+				this.endToken("Float", "end", this.text[this.tokenStart] === "-" ? -Infinity : Infinity);
+				return "DATA";
+			}
+			this.moveAt(startPos);
+		}
+		return this.reportParseError("unexpected-char");
+	}
+	NUMBER(cp) {
+		const start = this.text[this.tokenStart];
+		const sign = start === "+" ? CodePoint.PLUS_SIGN : start === "-" ? CodePoint.DASH : CodePoint.NULL;
+		if (cp === CodePoint.DIGIT_0) {
+			if (sign === CodePoint.NULL) {
+				const startPos = this.codePointIterator.start;
+				const nextCp$1 = this.nextCode();
+				if (isDigit(nextCp$1)) {
+					const nextNextCp = this.nextCode();
+					if (nextNextCp === CodePoint.COLON) {
+						this.data = {
+							hasDate: false,
+							year: 0,
+							month: 0,
+							day: 0,
+							hour: Number(String.fromCodePoint(CodePoint.DIGIT_0, nextCp$1)),
+							minute: 0,
+							second: 0
+						};
+						return "TIME_MINUTE";
+					}
+					if (isDigit(nextNextCp)) {
+						const nextNextNextCp = this.nextCode();
+						if (isDigit(nextNextNextCp) && this.eatCode(CodePoint.DASH)) {
+							this.data = {
+								hasDate: true,
+								year: Number(String.fromCodePoint(CodePoint.DIGIT_0, nextCp$1, nextNextCp, nextNextNextCp)),
+								month: 0,
+								day: 0,
+								hour: 0,
+								minute: 0,
+								second: 0
+							};
+							return "DATE_MONTH";
+						}
+					}
+					this.moveAt(startPos);
+					return this.reportParseError("invalid-leading-zero");
+				}
+				this.moveAt(startPos);
+			}
+			cp = this.nextCode();
+			if (cp === CodePoint.LATIN_SMALL_X || cp === CodePoint.LATIN_SMALL_O || cp === CodePoint.LATIN_SMALL_B) {
+				if (sign !== CodePoint.NULL) return this.reportParseError("unexpected-char");
+				return cp === CodePoint.LATIN_SMALL_X ? "HEX" : cp === CodePoint.LATIN_SMALL_O ? "OCTAL" : "BINARY";
+			}
+			if (cp === CodePoint.LATIN_SMALL_E || cp === CodePoint.LATIN_CAPITAL_E) {
+				this.data = {
+					minus: sign === CodePoint.DASH,
+					left: [CodePoint.DIGIT_0]
+				};
+				return "EXPONENT_RIGHT";
+			}
+			if (cp === CodePoint.DOT) {
+				this.data = {
+					minus: sign === CodePoint.DASH,
+					absInt: [CodePoint.DIGIT_0]
+				};
+				return "FRACTIONAL_RIGHT";
+			}
+			this.endToken("Integer", "start", "0", 10);
+			return this.back("DATA");
+		}
+		const { out, nextCp, hasUnderscore } = this.parseDigits(cp, isDigit);
+		if (nextCp === CodePoint.DASH && sign === CodePoint.NULL && !hasUnderscore && out.length === 4) {
+			this.data = {
+				hasDate: true,
+				year: Number(String.fromCodePoint(...out)),
+				month: 0,
+				day: 0,
+				hour: 0,
+				minute: 0,
+				second: 0
+			};
+			return "DATE_MONTH";
+		}
+		if (nextCp === CodePoint.COLON && sign === CodePoint.NULL && !hasUnderscore && out.length === 2) {
+			this.data = {
+				hasDate: false,
+				year: 0,
+				month: 0,
+				day: 0,
+				hour: Number(String.fromCodePoint(...out)),
+				minute: 0,
+				second: 0
+			};
+			return "TIME_MINUTE";
+		}
+		if (nextCp === CodePoint.LATIN_SMALL_E || nextCp === CodePoint.LATIN_CAPITAL_E) {
+			this.data = {
+				minus: sign === CodePoint.DASH,
+				left: out
+			};
+			return "EXPONENT_RIGHT";
+		}
+		if (nextCp === CodePoint.DOT) {
+			this.data = {
+				minus: sign === CodePoint.DASH,
+				absInt: out
+			};
+			return "FRACTIONAL_RIGHT";
+		}
+		this.endToken("Integer", "start", sign === CodePoint.DASH ? String.fromCodePoint(CodePoint.DASH, ...out) : String.fromCodePoint(...out), 10);
+		return this.back("DATA");
+	}
+	HEX(cp) {
+		const { out } = this.parseDigits(cp, isHexDig);
+		this.endToken("Integer", "start", String.fromCodePoint(...out), 16);
+		return this.back("DATA");
+	}
+	OCTAL(cp) {
+		const { out } = this.parseDigits(cp, isOctalDig);
+		this.endToken("Integer", "start", String.fromCodePoint(...out), 8);
+		return this.back("DATA");
+	}
+	BINARY(cp) {
+		const { out } = this.parseDigits(cp, (c) => c === CodePoint.DIGIT_0 || c === CodePoint.DIGIT_1);
+		this.endToken("Integer", "start", String.fromCodePoint(...out), 2);
+		return this.back("DATA");
+	}
+	FRACTIONAL_RIGHT(cp) {
+		const { minus, absInt } = this.data;
+		const { out, nextCp } = this.parseDigits(cp, isDigit);
+		const absNum = [
+			...absInt,
+			CodePoint.DOT,
+			...out
+		];
+		if (nextCp === CodePoint.LATIN_SMALL_E || nextCp === CodePoint.LATIN_CAPITAL_E) {
+			this.data = {
+				minus,
+				left: absNum
+			};
+			return "EXPONENT_RIGHT";
+		}
+		const value = Number(minus ? String.fromCodePoint(CodePoint.DASH, ...absNum) : String.fromCodePoint(...absNum));
+		this.endToken("Float", "start", value);
+		return this.back("DATA");
+	}
+	EXPONENT_RIGHT(cp) {
+		const { left, minus: leftMinus } = this.data;
+		let minus = false;
+		if (cp === CodePoint.DASH || cp === CodePoint.PLUS_SIGN) {
+			minus = cp === CodePoint.DASH;
+			cp = this.nextCode();
+		}
+		const { out } = this.parseDigits(cp, isDigit);
+		const right = out;
+		if (minus) right.unshift(CodePoint.DASH);
+		const value = Number(leftMinus ? String.fromCodePoint(CodePoint.DASH, ...left, CodePoint.LATIN_SMALL_E, ...right) : String.fromCodePoint(...left, CodePoint.LATIN_SMALL_E, ...right));
+		this.endToken("Float", "start", value);
+		return this.back("DATA");
+	}
+	BOOLEAN(cp) {
+		if (cp === CodePoint.LATIN_SMALL_T) {
+			const startPos = this.codePointIterator.start;
+			if (this.eatCode(CodePoint.LATIN_SMALL_R) && this.eatCode(CodePoint.LATIN_SMALL_U) && this.eatCode(CodePoint.LATIN_SMALL_E)) {
+				this.endToken("Boolean", "end", true);
+				return "DATA";
+			}
+			this.moveAt(startPos);
+		} else if (cp === CodePoint.LATIN_SMALL_F) {
+			const startPos = this.codePointIterator.start;
+			if (this.eatCode(CodePoint.LATIN_SMALL_A) && this.eatCode(CodePoint.LATIN_SMALL_L) && this.eatCode(CodePoint.LATIN_SMALL_S) && this.eatCode(CodePoint.LATIN_SMALL_E)) {
+				this.endToken("Boolean", "end", false);
+				return "DATA";
+			}
+			this.moveAt(startPos);
+		}
+		return this.reportParseError("unexpected-char");
+	}
+	DATE_MONTH(cp) {
+		const start = this.codePointIterator.start;
+		if (!isDigit(cp)) return this.reportParseError("unexpected-char");
+		cp = this.nextCode();
+		if (!isDigit(cp)) return this.reportParseError("unexpected-char");
+		cp = this.nextCode();
+		if (cp !== CodePoint.DASH) return this.reportParseError("unexpected-char");
+		const end = this.codePointIterator.start;
+		const data = this.data;
+		data.month = Number(this.text.slice(start, end));
+		return "DATE_DAY";
+	}
+	DATE_DAY(cp) {
+		const start = this.codePointIterator.start;
+		if (!isDigit(cp)) return this.reportParseError("unexpected-char");
+		cp = this.nextCode();
+		if (!isDigit(cp)) return this.reportParseError("unexpected-char");
+		const end = this.codePointIterator.end;
+		const data = this.data;
+		data.day = Number(this.text.slice(start, end));
+		if (!isValidDate(data.year, data.month, data.day)) return this.reportParseError("invalid-date");
+		cp = this.nextCode();
+		if (cp === CodePoint.LATIN_CAPITAL_T || cp === CodePoint.LATIN_SMALL_T) return "TIME_HOUR";
+		if (cp === CodePoint.SPACE) {
+			const startPos = this.codePointIterator.start;
+			if (isDigit(this.nextCode()) && isDigit(this.nextCode())) {
+				this.moveAt(startPos);
+				return "TIME_HOUR";
+			}
+			this.moveAt(startPos);
+		}
+		const dateValue = getDateFromDateTimeData(data, "");
+		this.endToken("LocalDate", "start", dateValue);
+		return this.back("DATA");
+	}
+	TIME_HOUR(cp) {
+		const start = this.codePointIterator.start;
+		if (!isDigit(cp)) return this.reportParseError("unexpected-char");
+		cp = this.nextCode();
+		if (!isDigit(cp)) return this.reportParseError("unexpected-char");
+		cp = this.nextCode();
+		if (cp !== CodePoint.COLON) return this.reportParseError("unexpected-char");
+		const end = this.codePointIterator.start;
+		const data = this.data;
+		data.hour = Number(this.text.slice(start, end));
+		return "TIME_MINUTE";
+	}
+	TIME_MINUTE(cp) {
+		const start = this.codePointIterator.start;
+		if (!isDigit(cp)) return this.reportParseError("unexpected-char");
+		cp = this.nextCode();
+		if (!isDigit(cp)) return this.reportParseError("unexpected-char");
+		const end = this.codePointIterator.end;
+		const data = this.data;
+		data.minute = Number(this.text.slice(start, end));
+		cp = this.nextCode();
+		if (cp === CodePoint.COLON) return "TIME_SECOND";
+		if (this.tomlVersion.lt(1, 1)) return this.reportParseError("unexpected-char");
+		if (!isValidTime(data.hour, data.minute, data.second)) return this.reportParseError("invalid-time");
+		return this.processTimeEnd(cp, data);
+	}
+	TIME_SECOND(cp) {
+		const start = this.codePointIterator.start;
+		if (!isDigit(cp)) return this.reportParseError("unexpected-char");
+		cp = this.nextCode();
+		if (!isDigit(cp)) return this.reportParseError("unexpected-char");
+		const end = this.codePointIterator.end;
+		const data = this.data;
+		data.second = Number(this.text.slice(start, end));
+		if (!isValidTime(data.hour, data.minute, data.second)) return this.reportParseError("invalid-time");
+		cp = this.nextCode();
+		if (cp === CodePoint.DOT) return "TIME_SEC_FRAC";
+		return this.processTimeEnd(cp, data);
+	}
+	TIME_SEC_FRAC(cp) {
+		if (!isDigit(cp)) return this.reportParseError("unexpected-char");
+		const start = this.codePointIterator.start;
+		while (isDigit(cp)) cp = this.nextCode();
+		const end = this.codePointIterator.start;
+		const data = this.data;
+		data.frac = this.text.slice(start, end);
+		return this.processTimeEnd(cp, data);
+	}
+	processTimeEnd(cp, data) {
+		if (data.hasDate) {
+			if (cp === CodePoint.DASH || cp === CodePoint.PLUS_SIGN) {
+				data.offsetSign = cp;
+				return "TIME_OFFSET";
+			}
+			if (cp === CodePoint.LATIN_CAPITAL_Z || cp === CodePoint.LATIN_SMALL_Z) {
+				const dateValue$2 = getDateFromDateTimeData(data, "Z");
+				this.endToken("OffsetDateTime", "end", dateValue$2);
+				return "DATA";
+			}
+			const dateValue$1 = getDateFromDateTimeData(data, "");
+			this.endToken("LocalDateTime", "start", dateValue$1);
+			return this.back("DATA");
+		}
+		const dateValue = getDateFromDateTimeData(data, "");
+		this.endToken("LocalTime", "start", dateValue);
+		return this.back("DATA");
+	}
+	TIME_OFFSET(cp) {
+		if (!isDigit(cp)) return this.reportParseError("unexpected-char");
+		const hourStart = this.codePointIterator.start;
+		cp = this.nextCode();
+		if (!isDigit(cp)) return this.reportParseError("unexpected-char");
+		cp = this.nextCode();
+		if (cp !== CodePoint.COLON) return this.reportParseError("unexpected-char");
+		const hourEnd = this.codePointIterator.start;
+		cp = this.nextCode();
+		const minuteStart = this.codePointIterator.start;
+		if (!isDigit(cp)) return this.reportParseError("unexpected-char");
+		cp = this.nextCode();
+		if (!isDigit(cp)) return this.reportParseError("unexpected-char");
+		const minuteEnd = this.codePointIterator.end;
+		const hour = Number(this.text.slice(hourStart, hourEnd));
+		const minute = Number(this.text.slice(minuteStart, minuteEnd));
+		if (!isValidTime(hour, minute, 0)) return this.reportParseError("invalid-time");
+		const data = this.data;
+		const dateValue = getDateFromDateTimeData(data, `${String.fromCodePoint(data.offsetSign)}${padStart(hour, 2)}:${padStart(minute, 2)}`);
+		this.endToken("OffsetDateTime", "end", dateValue);
+		return "DATA";
+	}
+	parseDigits(cp, checkDigit) {
+		if (cp === CodePoint.UNDERSCORE) return this.reportParseError("invalid-underscore");
+		if (!checkDigit(cp)) return this.reportParseError("unexpected-char");
+		const out = [];
+		let before = CodePoint.NULL;
+		let hasUnderscore = false;
+		while (checkDigit(cp) || cp === CodePoint.UNDERSCORE) {
+			if (cp === CodePoint.UNDERSCORE) {
+				hasUnderscore = true;
+				if (before === CodePoint.UNDERSCORE) return this.reportParseError("invalid-underscore");
+			} else out.push(cp);
+			before = cp;
+			cp = this.nextCode();
+		}
+		if (before === CodePoint.UNDERSCORE) return this.reportParseError("invalid-underscore");
+		return {
+			out,
+			nextCp: cp,
+			hasUnderscore
+		};
+	}
+	parseUnicode(count) {
+		const startLoc = this.codePointIterator.start;
+		const start = this.codePointIterator.end;
+		let charCount = 0;
+		let cp;
+		while ((cp = this.nextCode()) !== CodePoint.EOF) {
+			if (!isHexDig(cp)) {
+				this.moveAt(startLoc);
+				return this.reportParseError("invalid-char-in-escape-sequence");
+			}
+			charCount++;
+			if (charCount >= count) break;
+		}
+		const end = this.codePointIterator.end;
+		const code = this.text.slice(start, end);
+		const codePoint = parseInt(code, 16);
+		if (!isUnicodeScalarValue(codePoint)) return this.reportParseError("invalid-code-point", { cp: code });
+		return codePoint;
+	}
+	reportParseErrorControlChar() {
+		return this.reportParseError("invalid-control-character");
+	}
+};
+/**
+* Check whether the code point is unquoted-key-char
+*/
+function isUnquotedKeyChar(cp, tomlVersion) {
+	if (isLetter(cp) || isDigit(cp) || cp === CodePoint.UNDERSCORE || cp === CodePoint.DASH) return true;
+	if (tomlVersion.lt(1, 1)) return false;
+	return false;
+}
+/**
+* Check whether the code point is control character other than tab
+*/
+function isControlOtherThanTab(cp) {
+	return isControl(cp) && cp !== CodePoint.TABULATION || cp === CodePoint.DELETE;
+}
+/**
+* Check whether the code point is non-eol for TOML 1.1
+*/
+function isNonEOL(cp) {
+	return cp === CodePoint.TABULATION || CodePoint.SPACE <= cp && cp <= CodePoint.TILDE || isNonAscii(cp);
+}
+/**
+* Check whether the code point is a non-ascii character.
+*/
+function isNonAscii(cp) {
+	return CodePoint.PAD <= cp && cp <= CodePoint.CP_D7FF || CodePoint.CP_E000 <= cp && cp <= CodePoint.CP_10FFFF;
+}
+/**
+* Check whether the given values is valid date
+*/
+function isValidDate(y, m, d) {
+	if (y >= 0 && m <= 12 && m >= 1 && d >= 1) return d <= (m === 2 ? y & 3 || !(y % 25) && y & 15 ? 28 : 29 : 30 + (m + (m >> 3) & 1));
+	return false;
+}
+/**
+* Check whether the given values is valid time
+*/
+function isValidTime(h, m, s) {
+	if (h >= 24 || h < 0 || m > 59 || m < 0 || s > 60 || s < 0) return false;
+	return true;
+}
+/**
+* Get date from DateTimeData
+*/
+function getDateFromDateTimeData(data, timeZone) {
+	const year = padStart(data.year, 4);
+	const month = data.month ? padStart(data.month, 2) : "01";
+	const day = data.day ? padStart(data.day, 2) : "01";
+	const hour = padStart(data.hour, 2);
+	const minute = padStart(data.minute, 2);
+	const second = padStart(data.second, 2);
+	const textDate = `${year}-${month}-${day}`;
+	const frac = data.frac ? `.${data.frac}` : "";
+	const dateValue = /* @__PURE__ */ new Date(`${textDate}T${hour}:${minute}:${second}${frac}${timeZone}`);
+	if (!isNaN(dateValue.getTime()) || data.second !== 60) return dateValue;
+	return /* @__PURE__ */ new Date(`${textDate}T${hour}:${minute}:59${frac}${timeZone}`);
+}
+/**
+* Pad with zeros.
+*/
+function padStart(num, maxLength) {
+	return String(num).padStart(maxLength, "0");
+}
+const VALUE_KIND_VALUE = Symbol("VALUE_KIND_VALUE");
+const VALUE_KIND_INTERMEDIATE = Symbol("VALUE_KIND_INTERMEDIATE");
+var KeysResolver = class {
+	constructor(ctx) {
+		this.rootKeys = /* @__PURE__ */ new Map();
+		this.tables = [];
+		this.ctx = ctx;
+	}
+	applyResolveKeyForTable(node) {
+		let keys = this.rootKeys;
+		const peekKeyIndex = node.key.keys.length - 1;
+		for (let index = 0; index < peekKeyIndex; index++) {
+			const keyNode = node.key.keys[index];
+			const keyName = toKeyName(keyNode);
+			node.resolvedKey.push(keyName);
+			let keyStore = keys.get(keyName);
+			if (!keyStore) {
+				keyStore = {
+					node: keyNode,
+					keys: /* @__PURE__ */ new Map()
+				};
+				keys.set(keyName, keyStore);
+			} else if (keyStore.table === "array") {
+				const peekIndex = keyStore.peekIndex;
+				node.resolvedKey.push(peekIndex);
+				keyStore = keyStore.keys.get(peekIndex);
+			}
+			keys = keyStore.keys;
+		}
+		const lastKeyNode = node.key.keys[peekKeyIndex];
+		const lastKeyName = toKeyName(lastKeyNode);
+		node.resolvedKey.push(lastKeyName);
+		const lastKeyStore = keys.get(lastKeyName);
+		if (!lastKeyStore) if (node.kind === "array") {
+			node.resolvedKey.push(0);
+			const newKeyStore = {
+				node: lastKeyNode,
+				keys: /* @__PURE__ */ new Map()
+			};
+			keys.set(lastKeyName, {
+				table: node.kind,
+				node: lastKeyNode,
+				keys: /* @__PURE__ */ new Map([[0, newKeyStore]]),
+				peekIndex: 0
+			});
+			this.tables.push({
+				node,
+				keys: newKeyStore.keys
+			});
+		} else {
+			const newKeyStore = {
+				table: node.kind,
+				node: lastKeyNode,
+				keys: /* @__PURE__ */ new Map()
+			};
+			keys.set(lastKeyName, newKeyStore);
+			this.tables.push({
+				node,
+				keys: newKeyStore.keys
+			});
+		}
+		else if (!lastKeyStore.table) if (node.kind === "array") this.ctx.reportParseError("dupe-keys", lastKeyNode);
+		else {
+			const transformKey = {
+				table: node.kind,
+				node: lastKeyNode,
+				keys: lastKeyStore.keys
+			};
+			keys.set(lastKeyName, transformKey);
+			this.tables.push({
+				node,
+				keys: transformKey.keys
+			});
+		}
+		else if (lastKeyStore.table === "array") if (node.kind === "array") {
+			const newKeyStore = {
+				node: lastKeyNode,
+				keys: /* @__PURE__ */ new Map()
+			};
+			const newIndex = lastKeyStore.peekIndex + 1;
+			node.resolvedKey.push(newIndex);
+			lastKeyStore.keys.set(newIndex, newKeyStore);
+			lastKeyStore.peekIndex = newIndex;
+			this.tables.push({
+				node,
+				keys: newKeyStore.keys
+			});
+		} else this.ctx.reportParseError("dupe-keys", lastKeyNode);
+		else this.ctx.reportParseError("dupe-keys", lastKeyNode);
+	}
+	verifyDuplicateKeys(node) {
+		for (const body of node.body) if (body.type === "TOMLKeyValue") verifyDuplicateKeysForKeyValue(this.ctx, this.rootKeys, body);
+		for (const { node: tableNode, keys } of this.tables) for (const body of tableNode.body) verifyDuplicateKeysForKeyValue(this.ctx, keys, body);
+	}
+};
+/**
+* Verify duplicate keys from TOMLKeyValue
+*/
+function verifyDuplicateKeysForKeyValue(ctx, defineKeys, node) {
+	let keys = defineKeys;
+	const lastKey = last(node.key.keys);
+	for (const keyNode of node.key.keys) {
+		const key = toKeyName(keyNode);
+		let defineKey = keys.get(key);
+		if (defineKey) {
+			if (defineKey.value === VALUE_KIND_VALUE) ctx.reportParseError("dupe-keys", getAfterNode(keyNode, defineKey.node));
+			else if (lastKey === keyNode) ctx.reportParseError("dupe-keys", getAfterNode(keyNode, defineKey.node));
+			else if (defineKey.table) ctx.reportParseError("dupe-keys", getAfterNode(keyNode, defineKey.node));
+			defineKey.value = VALUE_KIND_INTERMEDIATE;
+		} else {
+			if (lastKey === keyNode) defineKey = {
+				value: VALUE_KIND_VALUE,
+				node: keyNode,
+				keys: /* @__PURE__ */ new Map()
+			};
+			else defineKey = {
+				value: VALUE_KIND_INTERMEDIATE,
+				node: keyNode,
+				keys: /* @__PURE__ */ new Map()
+			};
+			keys.set(key, defineKey);
+		}
+		keys = defineKey.keys;
+	}
+	if (node.value.type === "TOMLInlineTable") verifyDuplicateKeysForInlineTable(ctx, keys, node.value);
+	else if (node.value.type === "TOMLArray") verifyDuplicateKeysForArray(ctx, keys, node.value);
+}
+/**
+* Verify duplicate keys from TOMLInlineTable
+*/
+function verifyDuplicateKeysForInlineTable(ctx, defineKeys, node) {
+	for (const body of node.body) verifyDuplicateKeysForKeyValue(ctx, defineKeys, body);
+}
+/**
+* Verify duplicate keys from TOMLArray
+*/
+function verifyDuplicateKeysForArray(ctx, defineKeys, node) {
+	const keys = defineKeys;
+	for (let index = 0; index < node.elements.length; index++) {
+		const element = node.elements[index];
+		let defineKey = keys.get(index);
+		if (defineKey) ctx.reportParseError("dupe-keys", getAfterNode(element, defineKey.node));
+		else {
+			defineKey = {
+				value: VALUE_KIND_VALUE,
+				node: element,
+				keys: /* @__PURE__ */ new Map()
+			};
+			defineKeys.set(index, defineKey);
+			if (element.type === "TOMLInlineTable") verifyDuplicateKeysForInlineTable(ctx, defineKey.keys, element);
+			else if (element.type === "TOMLArray") verifyDuplicateKeysForArray(ctx, defineKey.keys, element);
+		}
+	}
+}
+/**
+* Get the after node
+*/
+function getAfterNode(a, b) {
+	return a.range[0] <= b.range[0] ? b : a;
+}
+var Context = class {
+	constructor(data) {
+		this.tokens = [];
+		this.comments = [];
+		this.back = null;
+		this.stateStack = [];
+		this.needNewLine = false;
+		this.needSameLine = false;
+		this.currToken = null;
+		this.prevToken = null;
+		this.valueContainerStack = [];
+		this.tokenizer = new Tokenizer(data.text, data.parserOptions);
+		this.topLevelTable = data.topLevelTable;
+		this.table = data.topLevelTable;
+		this.keysResolver = new KeysResolver(this);
+	}
+	/**
+	* Get the next token.
+	*/
+	nextToken(option) {
+		this.prevToken = this.currToken;
+		if (this.back) {
+			this.currToken = this.back;
+			this.back = null;
+		} else this.currToken = this._nextTokenFromTokenizer(option);
+		if ((this.needNewLine || this.needSameLine || option?.needSameLine) && this.prevToken && this.currToken) if (this.prevToken.loc.end.line === this.currToken.loc.start.line) {
+			if (this.needNewLine) return this.reportParseError("missing-newline", this.currToken);
+		} else {
+			const needSameLine = this.needSameLine || option?.needSameLine;
+			if (needSameLine) return this.reportParseError(needSameLine, this.currToken);
+		}
+		this.needNewLine = false;
+		this.needSameLine = false;
+		return this.currToken;
+	}
+	_nextTokenFromTokenizer(option) {
+		const valuesEnabled = this.tokenizer.valuesEnabled;
+		if (option?.valuesEnabled) this.tokenizer.valuesEnabled = option.valuesEnabled;
+		let token = this.tokenizer.nextToken();
+		while (token && token.type === "Block") {
+			this.comments.push(token);
+			token = this.tokenizer.nextToken();
+		}
+		if (token) this.tokens.push(token);
+		this.tokenizer.valuesEnabled = valuesEnabled;
+		return token;
+	}
+	backToken() {
+		if (this.back) throw new Error("Illegal state");
+		this.back = this.currToken;
+		this.currToken = this.prevToken;
+	}
+	addValueContainer(valueContainer) {
+		this.valueContainerStack.push(valueContainer);
+		this.tokenizer.valuesEnabled = true;
+	}
+	consumeValueContainer() {
+		const valueContainer = this.valueContainerStack.pop();
+		this.tokenizer.valuesEnabled = this.valueContainerStack.length > 0;
+		return valueContainer;
+	}
+	applyResolveKeyForTable(node) {
+		this.keysResolver.applyResolveKeyForTable(node);
+	}
+	verifyDuplicateKeys() {
+		this.keysResolver.verifyDuplicateKeys(this.topLevelTable);
+	}
+	/**
+	* Report an invalid token error.
+	*/
+	reportParseError(code, token) {
+		let offset, line, column;
+		if (token) {
+			offset = token.range[0];
+			line = token.loc.start.line;
+			column = token.loc.start.column;
+		} else {
+			offset = this.tokenizer.start;
+			const startPos = this.tokenizer.getLocFromIndex(offset);
+			line = startPos.line;
+			column = startPos.column;
+		}
+		throw new ParseError(code, offset, line, column);
+	}
+};
+const STATE_FOR_ERROR = { VALUE: "missing-value" };
+const STRING_VALUE_STYLE_MAP = {
+	BasicString: "basic",
+	MultiLineBasicString: "basic",
+	LiteralString: "literal",
+	MultiLineLiteralString: "literal"
+};
+const STRING_KEY_STYLE_MAP = {
+	BasicString: "basic",
+	LiteralString: "literal"
+};
+const DATETIME_VALUE_KIND_MAP = {
+	OffsetDateTime: "offset-date-time",
+	LocalDateTime: "local-date-time",
+	LocalDate: "local-date",
+	LocalTime: "local-time"
+};
+var TOMLParser = class {
+	/**
+	* Initialize this parser.
+	*/
+	constructor(text, parserOptions) {
+		this.text = text;
+		this.parserOptions = parserOptions || {};
+		this.tomlVersion = getTOMLVer(this.parserOptions.tomlVersion);
+	}
+	/**
+	* Parse TOML
+	*/
+	parse() {
+		const ast = {
+			type: "Program",
+			body: [],
+			sourceType: "module",
+			tokens: [],
+			comments: [],
+			parent: null,
+			range: [0, 0],
+			loc: {
+				start: {
+					line: 1,
+					column: 0
+				},
+				end: {
+					line: 1,
+					column: 0
+				}
+			}
+		};
+		const node = {
+			type: "TOMLTopLevelTable",
+			body: [],
+			parent: ast,
+			range: cloneRange(ast.range),
+			loc: cloneLoc(ast.loc)
+		};
+		ast.body = [node];
+		const ctx = new Context({
+			text: this.text,
+			parserOptions: this.parserOptions,
+			topLevelTable: node
+		});
+		let token = ctx.nextToken();
+		if (token) {
+			node.range[0] = token.range[0];
+			node.loc.start = clonePos(token.loc.start);
+			while (token) {
+				const state$1 = ctx.stateStack.pop() || "TABLE";
+				ctx.stateStack.push(...this[state$1](token, ctx));
+				token = ctx.nextToken();
+			}
+			const state = ctx.stateStack.pop() || "TABLE";
+			if (state in STATE_FOR_ERROR) return ctx.reportParseError(STATE_FOR_ERROR[state], null);
+			if (ctx.table.type === "TOMLTable") applyEndLoc(ctx.table, last(ctx.table.body));
+			applyEndLoc(node, last(node.body));
+		}
+		ctx.verifyDuplicateKeys();
+		ast.tokens = ctx.tokens;
+		ast.comments = ctx.comments;
+		const endOffset = ctx.tokenizer.end;
+		const endPos = ctx.tokenizer.getLocFromIndex(endOffset);
+		ast.range[1] = endOffset;
+		ast.loc.end = {
+			line: endPos.line,
+			column: endPos.column
+		};
+		return ast;
+	}
+	TABLE(token, ctx) {
+		if (isBare(token) || isString(token)) return this.processKeyValue(token, ctx.table, ctx);
+		if (isLeftBracket(token)) return this.processTable(token, ctx.topLevelTable, ctx);
+		return ctx.reportParseError("unexpected-token", token);
+	}
+	VALUE(token, ctx) {
+		if (isString(token) || isMultiLineString(token)) return this.processStringValue(token, ctx);
+		if (isNumber(token)) return this.processNumberValue(token, ctx);
+		if (isBoolean(token)) return this.processBooleanValue(token, ctx);
+		if (isDateTime(token)) return this.processDateTimeValue(token, ctx);
+		if (isLeftBracket(token)) return this.processArray(token, ctx);
+		if (isLeftBrace(token)) return this.processInlineTable(token, ctx);
+		return ctx.reportParseError("unexpected-token", token);
+	}
+	processTable(token, topLevelTableNode, ctx) {
+		const tableNode = {
+			type: "TOMLTable",
+			kind: "standard",
+			key: null,
+			resolvedKey: [],
+			body: [],
+			parent: topLevelTableNode,
+			range: cloneRange(token.range),
+			loc: cloneLoc(token.loc)
+		};
+		if (ctx.table.type === "TOMLTable") applyEndLoc(ctx.table, last(ctx.table.body));
+		topLevelTableNode.body.push(tableNode);
+		ctx.table = tableNode;
+		let targetToken = ctx.nextToken({ needSameLine: "invalid-key-value-newline" });
+		if (isLeftBracket(targetToken)) {
+			if (token.range[1] < targetToken.range[0]) return ctx.reportParseError("invalid-space", targetToken);
+			tableNode.kind = "array";
+			targetToken = ctx.nextToken({ needSameLine: "invalid-key-value-newline" });
+		}
+		if (isRightBracket(targetToken)) return ctx.reportParseError("missing-key", targetToken);
+		if (!targetToken) return ctx.reportParseError("unterminated-table-key", null);
+		targetToken = this.processKeyNode(targetToken, tableNode, ctx).nextToken;
+		if (!isRightBracket(targetToken)) return ctx.reportParseError("unterminated-table-key", targetToken);
+		if (tableNode.kind === "array") {
+			const rightBracket = targetToken;
+			targetToken = ctx.nextToken({ needSameLine: "invalid-key-value-newline" });
+			if (!isRightBracket(targetToken)) return ctx.reportParseError("unterminated-table-key", targetToken);
+			if (rightBracket.range[1] < targetToken.range[0]) return ctx.reportParseError("invalid-space", targetToken);
+		}
+		applyEndLoc(tableNode, targetToken);
+		ctx.applyResolveKeyForTable(tableNode);
+		ctx.needNewLine = true;
+		return [];
+	}
+	processKeyValue(token, tableNode, ctx) {
+		const keyValueNode = {
+			type: "TOMLKeyValue",
+			key: null,
+			value: null,
+			parent: tableNode,
+			range: cloneRange(token.range),
+			loc: cloneLoc(token.loc)
+		};
+		tableNode.body.push(keyValueNode);
+		const { nextToken: targetToken } = this.processKeyNode(token, keyValueNode, ctx);
+		if (!isEq(targetToken)) return ctx.reportParseError("missing-equals-sign", targetToken);
+		ctx.addValueContainer({
+			parent: keyValueNode,
+			set: (valNode) => {
+				keyValueNode.value = valNode;
+				applyEndLoc(keyValueNode, valNode);
+				ctx.needNewLine = true;
+				return [];
+			}
+		});
+		ctx.needSameLine = "invalid-key-value-newline";
+		return ["VALUE"];
+	}
+	processKeyNode(token, parent, ctx) {
+		if (isDot(token)) ctx.reportParseError("invalid-leading-dot-in-key", token);
+		const keyNode = {
+			type: "TOMLKey",
+			keys: [],
+			parent,
+			range: cloneRange(token.range),
+			loc: cloneLoc(token.loc)
+		};
+		parent.key = keyNode;
+		let targetToken = token;
+		let dotToken = null;
+		do {
+			if (isBare(targetToken)) this.processBareKey(targetToken, keyNode);
+			else if (isString(targetToken)) this.processStringKey(targetToken, keyNode);
+			else break;
+			dotToken = null;
+			targetToken = ctx.nextToken({ needSameLine: "invalid-key-value-newline" });
+			if (!isDot(targetToken)) break;
+			dotToken = targetToken;
+			targetToken = ctx.nextToken({ needSameLine: "invalid-key-value-newline" });
+		} while (targetToken);
+		if (dotToken) ctx.reportParseError(isDot(targetToken) ? "invalid-consecutive-dots-in-key" : "invalid-trailing-dot-in-key", dotToken);
+		applyEndLoc(keyNode, last(keyNode.keys));
+		return {
+			keyNode,
+			nextToken: targetToken
+		};
+	}
+	processBareKey(token, keyNode) {
+		const node = {
+			type: "TOMLBare",
+			name: token.value,
+			parent: keyNode,
+			range: cloneRange(token.range),
+			loc: cloneLoc(token.loc)
+		};
+		keyNode.keys.push(node);
+	}
+	processStringKey(token, keyNode) {
+		const node = {
+			type: "TOMLQuoted",
+			kind: "string",
+			value: token.string,
+			style: STRING_KEY_STYLE_MAP[token.type],
+			multiline: false,
+			parent: keyNode,
+			range: cloneRange(token.range),
+			loc: cloneLoc(token.loc)
+		};
+		keyNode.keys.push(node);
+	}
+	processStringValue(token, ctx) {
+		const valueContainer = ctx.consumeValueContainer();
+		const node = {
+			type: "TOMLValue",
+			kind: "string",
+			value: token.string,
+			style: STRING_VALUE_STYLE_MAP[token.type],
+			multiline: isMultiLineString(token),
+			parent: valueContainer.parent,
+			range: cloneRange(token.range),
+			loc: cloneLoc(token.loc)
+		};
+		return valueContainer.set(node);
+	}
+	processNumberValue(token, ctx) {
+		const valueContainer = ctx.consumeValueContainer();
+		const text = this.text;
+		const [startRange, endRange] = token.range;
+		let numberString = null;
+		/**
+		* Get the text of number
+		*/
+		const getNumberText = () => {
+			return numberString ?? (numberString = text.slice(startRange, endRange).replace(/_/g, ""));
+		};
+		let node;
+		if (token.type === "Integer") node = {
+			type: "TOMLValue",
+			kind: "integer",
+			value: token.number,
+			bigint: token.bigint,
+			get number() {
+				return getNumberText();
+			},
+			parent: valueContainer.parent,
+			range: cloneRange(token.range),
+			loc: cloneLoc(token.loc)
+		};
+		else node = {
+			type: "TOMLValue",
+			kind: "float",
+			value: token.number,
+			get number() {
+				return getNumberText();
+			},
+			parent: valueContainer.parent,
+			range: cloneRange(token.range),
+			loc: cloneLoc(token.loc)
+		};
+		return valueContainer.set(node);
+	}
+	processBooleanValue(token, ctx) {
+		const valueContainer = ctx.consumeValueContainer();
+		const node = {
+			type: "TOMLValue",
+			kind: "boolean",
+			value: token.boolean,
+			parent: valueContainer.parent,
+			range: cloneRange(token.range),
+			loc: cloneLoc(token.loc)
+		};
+		return valueContainer.set(node);
+	}
+	processDateTimeValue(token, ctx) {
+		const valueContainer = ctx.consumeValueContainer();
+		const node = {
+			type: "TOMLValue",
+			kind: DATETIME_VALUE_KIND_MAP[token.type],
+			value: token.date,
+			datetime: token.value,
+			parent: valueContainer.parent,
+			range: cloneRange(token.range),
+			loc: cloneLoc(token.loc)
+		};
+		return valueContainer.set(node);
+	}
+	processArray(token, ctx) {
+		const valueContainer = ctx.consumeValueContainer();
+		const node = {
+			type: "TOMLArray",
+			elements: [],
+			parent: valueContainer.parent,
+			range: cloneRange(token.range),
+			loc: cloneLoc(token.loc)
+		};
+		const nextToken = ctx.nextToken({ valuesEnabled: true });
+		if (isRightBracket(nextToken)) {
+			applyEndLoc(node, nextToken);
+			return valueContainer.set(node);
+		}
+		ctx.backToken();
+		return this.processArrayValue(node, valueContainer, ctx);
+	}
+	processArrayValue(node, valueContainer, ctx) {
+		ctx.addValueContainer({
+			parent: node,
+			set: (valNode) => {
+				node.elements.push(valNode);
+				let nextToken = ctx.nextToken({ valuesEnabled: true });
+				const hasComma = isComma(nextToken);
+				if (hasComma) nextToken = ctx.nextToken({ valuesEnabled: true });
+				if (isRightBracket(nextToken)) {
+					applyEndLoc(node, nextToken);
+					return valueContainer.set(node);
+				}
+				if (hasComma) {
+					ctx.backToken();
+					return this.processArrayValue(node, valueContainer, ctx);
+				}
+				return ctx.reportParseError(nextToken ? "missing-comma" : "unterminated-array", nextToken);
+			}
+		});
+		return ["VALUE"];
+	}
+	processInlineTable(token, ctx) {
+		const valueContainer = ctx.consumeValueContainer();
+		const node = {
+			type: "TOMLInlineTable",
+			body: [],
+			parent: valueContainer.parent,
+			range: cloneRange(token.range),
+			loc: cloneLoc(token.loc)
+		};
+		const needSameLine = this.tomlVersion.gte(1, 1) ? void 0 : "invalid-inline-table-newline";
+		const nextToken = ctx.nextToken({ needSameLine });
+		if (nextToken) {
+			if (isBare(nextToken) || isString(nextToken)) return this.processInlineTableKeyValue(nextToken, node, valueContainer, ctx);
+			if (isRightBrace(nextToken)) {
+				applyEndLoc(node, nextToken);
+				return valueContainer.set(node);
+			}
+		}
+		return ctx.reportParseError("unexpected-token", nextToken);
+	}
+	processInlineTableKeyValue(token, inlineTableNode, valueContainer, ctx) {
+		const keyValueNode = {
+			type: "TOMLKeyValue",
+			key: null,
+			value: null,
+			parent: inlineTableNode,
+			range: cloneRange(token.range),
+			loc: cloneLoc(token.loc)
+		};
+		inlineTableNode.body.push(keyValueNode);
+		const { nextToken: targetToken } = this.processKeyNode(token, keyValueNode, ctx);
+		if (!isEq(targetToken)) return ctx.reportParseError("missing-equals-sign", targetToken);
+		const needSameLine = this.tomlVersion.gte(1, 1) ? void 0 : "invalid-inline-table-newline";
+		ctx.addValueContainer({
+			parent: keyValueNode,
+			set: (valNode) => {
+				keyValueNode.value = valNode;
+				applyEndLoc(keyValueNode, valNode);
+				let nextToken = ctx.nextToken({ needSameLine });
+				if (isComma(nextToken)) {
+					nextToken = ctx.nextToken({ needSameLine });
+					if (nextToken && (isBare(nextToken) || isString(nextToken))) return this.processInlineTableKeyValue(nextToken, inlineTableNode, valueContainer, ctx);
+					if (isRightBrace(nextToken)) {
+						if (this.tomlVersion.lt(1, 1)) return ctx.reportParseError("invalid-trailing-comma-in-inline-table", nextToken);
+					} else return ctx.reportParseError(nextToken ? "unexpected-token" : "unterminated-inline-table", nextToken);
+				}
+				if (isRightBrace(nextToken)) {
+					applyEndLoc(inlineTableNode, nextToken);
+					return valueContainer.set(inlineTableNode);
+				}
+				return ctx.reportParseError(nextToken ? "missing-comma" : "unterminated-inline-table", nextToken);
+			}
+		});
+		ctx.needSameLine = "invalid-key-value-newline";
+		return ["VALUE"];
+	}
+};
+/**
+* Check whether the given token is a dot.
+*/
+function isDot(token) {
+	return isPunctuator(token) && token.value === ".";
+}
+/**
+* Check whether the given token is an equal sign.
+*/
+function isEq(token) {
+	return isPunctuator(token) && token.value === "=";
+}
+/**
+* Check whether the given token is a left bracket.
+*/
+function isLeftBracket(token) {
+	return isPunctuator(token) && token.value === "[";
+}
+/**
+* Check whether the given token is a right bracket.
+*/
+function isRightBracket(token) {
+	return isPunctuator(token) && token.value === "]";
+}
+/**
+* Check whether the given token is a left brace.
+*/
+function isLeftBrace(token) {
+	return isPunctuator(token) && token.value === "{";
+}
+/**
+* Check whether the given token is a right brace.
+*/
+function isRightBrace(token) {
+	return isPunctuator(token) && token.value === "}";
+}
+/**
+* Check whether the given token is a comma.
+*/
+function isComma(token) {
+	return isPunctuator(token) && token.value === ",";
+}
+/**
+* Check whether the given token is a punctuator.
+*/
+function isPunctuator(token) {
+	return Boolean(token && token.type === "Punctuator");
+}
+/**
+* Check whether the given token is a bare token.
+*/
+function isBare(token) {
+	return token.type === "Bare";
+}
+/**
+* Check whether the given token is a string.
+*/
+function isString(token) {
+	return token.type === "BasicString" || token.type === "LiteralString";
+}
+/**
+* Check whether the given token is a multi-line string.
+*/
+function isMultiLineString(token) {
+	return token.type === "MultiLineBasicString" || token.type === "MultiLineLiteralString";
+}
+/**
+* Check whether the given token is a number.
+*/
+function isNumber(token) {
+	return token.type === "Integer" || token.type === "Float";
+}
+/**
+* Check whether the given token is a boolean.
+*/
+function isBoolean(token) {
+	return token.type === "Boolean";
+}
+/**
+* Check whether the given token is a date time.
+*/
+function isDateTime(token) {
+	return token.type === "OffsetDateTime" || token.type === "LocalDateTime" || token.type === "LocalDate" || token.type === "LocalTime";
+}
+/**
+* Apply end locations
+*/
+function applyEndLoc(node, child) {
+	if (child) {
+		node.range[1] = child.range[1];
+		node.loc.end = clonePos(child.loc.end);
+	}
+}
+/**
+* clone the location.
+*/
+function cloneRange(range) {
+	return [range[0], range[1]];
+}
+/**
+* clone the location.
+*/
+function cloneLoc(loc) {
+	return {
+		start: clonePos(loc.start),
+		end: clonePos(loc.end)
+	};
+}
+/**
+* clone the location.
+*/
+function clonePos(pos) {
+	return {
+		line: pos.line,
+		column: pos.column
+	};
+}
+const KEYS = unionWith({
+	Program: ["body"],
+	TOMLTopLevelTable: ["body"],
+	TOMLTable: ["key", "body"],
+	TOMLKeyValue: ["key", "value"],
+	TOMLKey: ["keys"],
+	TOMLArray: ["elements"],
+	TOMLInlineTable: ["body"],
+	TOMLBare: [],
+	TOMLQuoted: [],
+	TOMLValue: []
+});
+/**
+* Parse source code
+*/
+function parseForESLint(code, options) {
+	return {
+		ast: new TOMLParser(code, options).parse(),
+		visitorKeys: KEYS,
+		services: { isTOML: true }
+	};
+}
+/**
+* Gets the static value for the given node.
+*/
+const getStaticTOMLValue = generateConvertTOMLValue((node) => node.value);
+/** Generates a converter to convert from a node. */
+function generateConvertTOMLValue(convertValue) {
+	/**
+	* Resolve TOML value
+	*/
+	function resolveValue(node, baseTable) {
+		return resolver[node.type](node, baseTable);
+	}
+	const resolver = {
+		Program(node, baseTable = {}) {
+			return resolveValue(node.body[0], baseTable);
+		},
+		TOMLTopLevelTable(node, baseTable = {}) {
+			for (const body of node.body) resolveValue(body, baseTable);
+			return baseTable;
+		},
+		TOMLKeyValue(node, baseTable = {}) {
+			const value = resolveValue(node.value);
+			set(baseTable, resolveValue(node.key), value);
+			return baseTable;
+		},
+		TOMLTable(node, baseTable = {}) {
+			const table = getTable(baseTable, resolveValue(node.key), node.kind === "array");
+			for (const body of node.body) resolveValue(body, table);
+			return baseTable;
+		},
+		TOMLArray(node) {
+			return node.elements.map((e) => resolveValue(e));
+		},
+		TOMLInlineTable(node) {
+			const table = {};
+			for (const body of node.body) resolveValue(body, table);
+			return table;
+		},
+		TOMLKey(node) {
+			return node.keys.map((key) => resolveValue(key));
+		},
+		TOMLBare(node) {
+			return node.name;
+		},
+		TOMLQuoted(node) {
+			return node.value;
+		},
+		TOMLValue(node) {
+			return convertValue(node);
+		}
+	};
+	return (node) => resolveValue(node);
+}
+/**
+* Get the table from the table.
+*/
+function getTable(baseTable, keys, array) {
+	let target = baseTable;
+	for (let index = 0; index < keys.length - 1; index++) {
+		const key = keys[index];
+		target = getNextTargetFromKey(target, key);
+	}
+	const lastKey = last(keys);
+	const lastTarget = target[lastKey];
+	if (lastTarget == null) {
+		const tableValue$1 = {};
+		target[lastKey] = array ? [tableValue$1] : tableValue$1;
+		return tableValue$1;
+	}
+	if (isValue(lastTarget)) {
+		const tableValue$1 = {};
+		target[lastKey] = array ? [tableValue$1] : tableValue$1;
+		return tableValue$1;
+	}
+	if (!array) {
+		if (Array.isArray(lastTarget)) {
+			const tableValue$1 = {};
+			target[lastKey] = tableValue$1;
+			return tableValue$1;
+		}
+		return lastTarget;
+	}
+	if (Array.isArray(lastTarget)) {
+		const tableValue$1 = {};
+		lastTarget.push(tableValue$1);
+		return tableValue$1;
+	}
+	const tableValue = {};
+	target[lastKey] = [tableValue];
+	return tableValue;
+	/** Get next target from key */
+	function getNextTargetFromKey(currTarget, key) {
+		const nextTarget = currTarget[key];
+		if (nextTarget == null) {
+			const val = {};
+			currTarget[key] = val;
+			return val;
+		}
+		if (isValue(nextTarget)) {
+			const val = {};
+			currTarget[key] = val;
+			return val;
+		}
+		let resultTarget = nextTarget;
+		while (Array.isArray(resultTarget)) {
+			const lastIndex = resultTarget.length - 1;
+			const nextElement = resultTarget[lastIndex];
+			if (isValue(nextElement)) {
+				const val = {};
+				resultTarget[lastIndex] = val;
+				return val;
+			}
+			resultTarget = nextElement;
+		}
+		return resultTarget;
+	}
+}
+/**
+* Set the value to the table.
+*/
+function set(baseTable, keys, value) {
+	let target = baseTable;
+	for (let index = 0; index < keys.length - 1; index++) {
+		const key = keys[index];
+		const nextTarget = target[key];
+		if (nextTarget == null) {
+			const val = {};
+			target[key] = val;
+			target = val;
+		} else if (isValue(nextTarget) || Array.isArray(nextTarget)) {
+			const val = {};
+			target[key] = val;
+			target = val;
+		} else target = nextTarget;
+	}
+	target[last(keys)] = value;
+}
+/**
+* Check whether the given value is a value.
+*/
+function isValue(value) {
+	return typeof value !== "object" || value instanceof Date;
+}
+/**
+* Parse TOML source code
+*/
+function parseTOML(code, options) {
+	return parseForESLint(code, options).ast;
+}
+//#endregion
+//#region src/lib/aerospace-config.ts
+const parse = (source) => parseTOML(source, { tomlVersion: "1.1" });
+const keyName = (key) => key.keys.map((part) => part.type === "TOMLBare" ? part.name : part.value);
+/** Edit parsed source ranges, leaving every unrelated byte (including comments) intact. */
+function augmentAerospaceConfig(source, hookCommand) {
+	const newline = source.includes("\r\n") ? "\r\n" : "\n";
+	let output = source;
+	const command = (task) => `exec-and-forget ${hookCommand} ${task}`;
+	const insert = (start, end, text) => {
+		output = output.slice(0, start) + text + output.slice(end);
+	};
+	const rootKey = (name) => parse(output).body[0].body.find((node) => node.type === "TOMLKeyValue" && keyName(node.key).length === 1 && keyName(node.key)[0] === name);
+	const addRoot = (name, value) => insert(0, 0, `${name} = ${value}${newline}`);
+	for (const [name, value] of Object.entries({
+		"enable-normalization-flatten-containers": true,
+		"enable-normalization-opposite-orientation-for-nested-containers": true,
+		"default-root-container-layout": "tiles"
+	})) {
+		const node = rootKey(name);
+		if (!node) addRoot(name, JSON.stringify(value));
+		else if (getStaticTOMLValue(node.value) !== value) insert(...node.value.range, JSON.stringify(value));
+	}
+	for (const name of ["after-startup-command", "on-focus-changed"]) {
+		const value = command("watch-aerospace");
+		const node = rootKey(name);
+		if (!node) addRoot(name, `[${JSON.stringify(value)}]`);
+		else if (node.value.type === "TOMLArray") {
+			const values = getStaticTOMLValue(node.value);
+			if (!Array.isArray(values) || values.some((item) => typeof item !== "string")) throw new Error(`${name} must contain commands`);
+			if (!values.includes(value)) insert(node.value.range[0] + 1, node.value.range[0] + 1, `${JSON.stringify(value)}${values.length ? ", " : ""}`);
+		} else if (node.value.type === "TOMLValue" && node.value.kind === "string") {
+			if (node.value.value !== value) insert(...node.value.range, `[${JSON.stringify(value)}, ${output.slice(...node.value.range)}]`);
+		} else throw new Error(`${name} must be a command or command array`);
+	}
+	const value = command("window-created");
+	const callback = `{ check-further-callbacks = true, run = ${JSON.stringify(value)} }`;
+	const ast = parse(output);
+	const callbacks = getStaticTOMLValue(ast)["on-window-detected"];
+	if (callbacks !== void 0 && !Array.isArray(callbacks)) throw new Error("on-window-detected must be an array of callbacks");
+	if (!callbacks?.some((item) => item && typeof item === "object" && !Array.isArray(item) && !(item instanceof Date) && item["check-further-callbacks"] === true && (item.run === value || Array.isArray(item.run) && item.run.includes(value)))) {
+		const node = rootKey("on-window-detected");
+		if (node?.value.type === "TOMLArray") insert(node.value.range[0] + 1, node.value.range[0] + 1, `${newline}  ${callback}${node.value.elements.length ? "," : ""}${newline}`);
+		else {
+			const first = ast.body[0].body.find((item) => item.type === "TOMLTable" && item.kind === "array" && keyName(item.key).join(".") === "on-window-detected");
+			if (first) insert(first.range[0], first.range[0], `[[on-window-detected]]${newline}check-further-callbacks = true${newline}run = ${JSON.stringify(value)}${newline}${newline}`);
+			else addRoot("on-window-detected", `[${callback}]`);
+		}
+	}
+	parse(output);
+	return output;
+}
+//#endregion
+//#region src/lib/aerospace-setup.ts
+function findAerospaceConfig(home = os.homedir(), xdg = process.env.XDG_CONFIG_HOME) {
+	const candidates = [path.join(home, ".aerospace.toml"), path.join(xdg || path.join(home, ".config"), "aerospace/aerospace.toml")];
+	const existing = candidates.filter((candidate) => fs.existsSync(candidate));
+	if (existing.length > 1) throw new Error("Multiple AeroSpace configs found; set aerospaceSetup.configPath explicitly");
+	return existing[0] ?? candidates[0];
+}
+const shellQuote = (value) => `'${value.replaceAll("'", "'\\''")}'`;
+function writeIfChanged(filename, content, mode = 384) {
+	if (fs.existsSync(filename) && fs.readFileSync(filename, "utf8") === content) return false;
+	fs.mkdirSync(path.dirname(filename), { recursive: true });
+	const temporary = `${filename}.${process.pid}.${crypto.randomUUID()}.tmp`;
+	try {
+		fs.writeFileSync(temporary, content, {
+			mode,
+			flag: "wx"
+		});
+		fs.renameSync(temporary, filename);
+	} finally {
+		if (fs.existsSync(temporary)) fs.unlinkSync(temporary);
+	}
+	return true;
+}
+/** Install files first; reload and start the watcher separately so setup failures are observable. */
+function installAerospaceHooks(options, setup, hookModule, directory = path.join(os.homedir(), ".config/chords-ymsp")) {
+	const requested = path.resolve(setup.configPath ?? findAerospaceConfig());
+	const filename = fs.existsSync(requested) ? fs.realpathSync(requested) : requested;
+	const original = fs.existsSync(filename) ? fs.readFileSync(filename, "utf8") : "";
+	const runner = path.join(directory, "aerospace-hook.sh");
+	const settingsPath = path.join(directory, "aerospace-settings.json");
+	const updated = augmentAerospaceConfig(original, `/bin/sh ${shellQuote(runner)}`);
+	const bun = resolveBunExecutable(setup.bunPath);
+	if (!path.isAbsolute(bun)) throw new Error("aerospaceSetup.bunPath must be absolute");
+	if (!fs.existsSync(hookModule)) throw new Error(`Missing AeroSpace hook module: ${hookModule}; run vp pack`);
+	if (options.spawn || options.logger) throw new Error("AeroSpace setup cannot serialize spawn/logger; use aerospaceSetup: false for an embedded runtime");
+	writeIfChanged(settingsPath, JSON.stringify({
+		enabled: true,
+		options
+	}, null, 2) + "\n");
+	writeIfChanged(runner, `#!/bin/sh\numask 077\nexec ${shellQuote(bun)} ${shellQuote(hookModule)} ${shellQuote(settingsPath)} "$@" 2>>${shellQuote(path.join(directory, "aerospace.log"))}\n`);
+	let backupPath;
+	if (updated !== original) {
+		if (fs.existsSync(filename)) {
+			backupPath = `${filename}.chords-ymsp.${crypto.randomUUID()}.bak`;
+			fs.copyFileSync(filename, backupPath, fs.constants.COPYFILE_EXCL);
+		}
+		if ((fs.existsSync(filename) ? fs.readFileSync(filename, "utf8") : "") !== original) throw new Error("AeroSpace config changed during setup; retry setup");
+		writeIfChanged(filename, updated, fs.existsSync(filename) ? fs.statSync(filename).mode & 511 : 384);
+	}
+	return {
+		configPath: filename,
+		backupPath,
+		changed: updated !== original,
+		runner,
+		settingsPath
+	};
+}
+async function activateAerospaceHooks(installation, aerospacePath) {
+	const execute = promisify(execFile);
+	const { stdout } = await execute(aerospacePath, ["config", "--config-path"], { timeout: 15e3 });
+	const active = stdout.trim();
+	if (!active || fs.realpathSync(active) !== fs.realpathSync(installation.configPath)) throw new Error(`AeroSpace is using ${active || "its default config"}; set aerospaceSetup.configPath to its active config`);
+	await execute(aerospacePath, [
+		"reload-config",
+		"--dry-run",
+		"--no-gui"
+	], { timeout: 15e3 });
+	await execute(aerospacePath, ["reload-config", "--no-gui"], { timeout: 15e3 });
+	const child = spawn("/bin/sh", [installation.runner, "watch-aerospace"], {
+		detached: true,
+		env: {
+			...process.env,
+			CHORD_YMSP_READY: "1"
+		},
+		stdio: [
+			"ignore",
+			"pipe",
+			"pipe"
+		]
+	});
+	await new Promise((resolve, reject) => {
+		let output = "";
+		const timer = setTimeout(() => {
+			child.kill("SIGTERM");
+			finish(/* @__PURE__ */ new Error("AeroSpace watcher did not become ready; see aerospace.log"));
+		}, 15e3);
+		const finish = (error) => {
+			clearTimeout(timer);
+			child.off("error", onError);
+			child.off("exit", onExit);
+			child.stdout?.off("data", onData);
+			child.stdout?.destroy();
+			child.stderr?.destroy();
+			if (error) reject(error);
+			else resolve();
+		};
+		const onError = (error) => finish(error);
+		const onExit = (code) => finish(/* @__PURE__ */ new Error(`AeroSpace watcher exited before ready (${code}); see aerospace.log`));
+		const onData = (data) => {
+			output += data.toString();
+			if (output.includes("chords-ymsp:ready\n")) finish();
+		};
+		child.once("error", onError);
+		child.once("exit", onExit);
+		child.stdout?.on("data", onData);
+	});
+	child.unref();
+}
+function disableAerospaceHooks(directory = path.join(os.homedir(), ".config/chords-ymsp")) {
+	const filename = path.join(directory, "aerospace-settings.json");
+	if (fs.existsSync(filename)) writeIfChanged(filename, JSON.stringify({
+		enabled: false,
+		options: {}
+	}));
+}
+//#endregion
+//#region src/lib/yabai-setup.ts
+function findYabaiConfig(home = os.homedir(), xdg = process.env.XDG_CONFIG_HOME) {
+	const candidates = [path.join(xdg || path.join(home, ".config"), "yabai/yabairc"), path.join(home, ".yabairc")];
+	return candidates.find((file) => fs.existsSync(file)) ?? candidates[0];
+}
+const start = "# BEGIN chords-ymsp managed hooks";
+const end = "# END chords-ymsp managed hooks";
+function augmentYabaiConfig(source, runner) {
+	const newline = source.includes("\r\n") ? "\r\n" : "\n";
+	const block = [
+		start,
+		`/bin/sh ${shellQuote(runner)} register`,
+		end
+	].join(newline);
+	const first = source.indexOf(start), last = source.indexOf(end);
+	if (first < 0 && last < 0) return source + (source && !source.endsWith("\n") ? newline : "") + block + newline;
+	if (first < 0 || last < first || source.indexOf(start, first + 33) !== -1 || source.indexOf(end, last + 31) !== -1) throw new Error("Malformed chords-ymsp managed block in yabairc");
+	return source.slice(0, first) + block + source.slice(last + 31);
+}
+function installYabaiHooks(options, setup, hookModule, directory = path.join(os.homedir(), ".config/chords-ymsp")) {
+	const requested = path.resolve(setup.configPath ?? findYabaiConfig());
+	const filename = fs.existsSync(requested) ? fs.realpathSync(requested) : requested;
+	const original = fs.existsSync(filename) ? fs.readFileSync(filename, "utf8") : "#!/usr/bin/env sh\n";
+	const runner = path.join(directory, "yabai-hook.sh");
+	const settingsPath = path.join(directory, "yabai-settings.json");
+	const updated = augmentYabaiConfig(original, runner);
+	const bun = resolveBunExecutable(setup.bunPath);
+	if (!fs.existsSync(hookModule)) throw new Error(`Missing yabai hook module: ${hookModule}; run vp pack`);
+	if (options.spawn || options.logger) throw new Error("yabai setup cannot serialize spawn/logger; use yabaiSetup: false");
+	writeIfChanged(settingsPath, JSON.stringify({
+		enabled: true,
+		options
+	}, null, 2) + "\n");
+	writeIfChanged(runner, `#!/bin/sh\numask 077\nexec ${shellQuote(bun)} ${shellQuote(hookModule)} ${shellQuote(settingsPath)} "$@" 2>>${shellQuote(path.join(directory, "yabai.log"))}\n`);
+	let backupPath;
+	if (updated !== original || !fs.existsSync(filename)) {
+		if (fs.existsSync(filename)) {
+			backupPath = `${filename}.chords-ymsp.${crypto.randomUUID()}.bak`;
+			fs.copyFileSync(filename, backupPath, fs.constants.COPYFILE_EXCL);
+			if (fs.readFileSync(filename, "utf8") !== original) throw new Error("yabairc changed during setup; retry setup");
+		}
+		writeIfChanged(filename, updated, fs.existsSync(filename) ? fs.statSync(filename).mode & 511 : 493);
+	}
+	return {
+		configPath: filename,
+		runner,
+		settingsPath,
+		backupPath
+	};
+}
+async function activateYabaiHooks(installation) {
+	await promisify(execFile)("/bin/sh", [installation.runner, "register"], { timeout: 15e3 });
+}
+function disableYabaiHooks(directory = path.join(os.homedir(), ".config/chords-ymsp")) {
+	const filename = path.join(directory, "yabai-settings.json");
+	if (fs.existsSync(filename)) writeIfChanged(filename, JSON.stringify({
+		enabled: false,
+		options: {}
+	}));
+}
+//#endregion
 //#region src/js/ymsp.ts
-function buildAction() {
-	return async function action(taskSlug) {
+function buildAction({ aerospaceSetup = {}, yabaiSetup = {}, ...settings } = {}) {
+	const { windowManager = "aerospace" } = settings;
+	const directory = path.join(os.homedir(), ".config/ymsp");
+	const options = {
+		windowManager,
+		stateFilePath: path.join(directory, windowManager === "aerospace" ? "state.aerospace.json" : "state.json"),
+		lockfilePath: path.join(directory, "task.lock"),
+		watcherLockfilePath: path.join(directory, "aerospace-watcher.lock"),
+		environment: process.env,
+		...settings
+	};
+	const ymsp = new YMSP(options);
+	let ready;
+	let activate = () => Promise.resolve();
+	const ensureReady = () => {
+		if (!ready) {
+			ready = activate();
+			ready.catch((error) => {
+				ready = void 0;
+				console.error(`chords-ymsp ${windowManager} setup failed:`, error);
+			});
+		}
+		return ready;
+	};
+	const extension = import.meta.url.endsWith(".ts") ? "ts" : "js";
+	if (windowManager === "aerospace") disableYabaiHooks();
+	else disableAerospaceHooks();
+	if (windowManager === "aerospace" && aerospaceSetup !== false) {
+		const installation = installAerospaceHooks({
+			...options,
+			environment: settings.environment
+		}, aerospaceSetup, fileURLToPath(new URL(`./aerospace-hook.${extension}`, import.meta.url)));
+		activate = () => activateAerospaceHooks(installation, ymsp.config.aerospacePath);
+		ensureReady();
+	} else if (windowManager === "yabai" && yabaiSetup !== false) {
+		const installation = installYabaiHooks({
+			...options,
+			environment: settings.environment
+		}, yabaiSetup, fileURLToPath(new URL(`./yabai-hook.${extension}`, import.meta.url)));
+		activate = () => activateYabaiHooks(installation);
+		ensureReady();
+	}
+	const { tasksMap } = ymsp;
+	return async function action(taskSlug, ...args) {
 		if (!hasOwn(tasksMap, taskSlug)) throw new Error(`ymsp task ${taskSlug} not found`);
 		const task = tasksMap[taskSlug];
-		await task();
+		await ensureReady();
+		await Reflect.apply(task, null, args);
 	};
 }
 //#endregion
